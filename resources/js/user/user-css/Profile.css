@@ -1,0 +1,70 @@
+body{
+    background-color: white;
+    margin: 0;
+    
+}
+
+.profile-topbar{
+     background: linear-gradient(90deg, #1a237e, #283593);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 25px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.profile-topbar .title{
+    color: white;
+    font-size: 25px;
+}
+.profile-topbar a{
+    text-decoration: none;
+   
+    color: white;
+    display: block;
+}
+
+.profile-sidebar{
+     width: 220px;
+  height: 100vh;
+  background: #1e1e1e;
+  color: white;
+  padding-top: 70px; /* offset topbar */
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 90;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+}
+.profile-sidebar ul{
+    list-style: none;
+    padding: 0;
+
+}
+.profile-sidebar ul li{
+    margin: 15px 0;
+padding: 15px;
+
+}
+
+.profile-sidebar ul li a{
+    text-decoration: none;
+    color: white;
+    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 6px;
+
+}
+.profile-sidebar ul .profile-currentpage{
+ border-left: 4px solid #4CAF50; 
+  padding-left: 11px; 
+  color: #4CAF50;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.15);
+}
