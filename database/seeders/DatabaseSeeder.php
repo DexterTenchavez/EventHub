@@ -16,7 +16,7 @@ class DatabaseSeeder extends Seeder
         // Create only the admin account
         User::create([
             'name' => 'Admin User',
-            'email' => 'admin@example.com',
+            'email' => 'dextertenchavez@gmail.com',
             'username' => 'admin',
             'role' => 'admin',
             'password' => Hash::make('Admin123!'),

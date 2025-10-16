@@ -1,7 +1,7 @@
 /* General Body */
 body {
   font-family: 'Arial', sans-serif;
-  background-color: #f0f4f8;
+  background: linear-gradient(to right, #d25ac0, #950389);
   color: black;
   margin: 0;
   display: flex;
@@ -10,7 +10,11 @@ body {
   min-height: 100vh;
 }
 
-/* Signup Container */
+.sign-up{
+  justify-content: center;
+  align-items: center;
+}
+
 .signup-container {
   background-color: #fff;
   padding: 40px 35px;
@@ -85,12 +89,14 @@ body {
   text-align: center;
   margin-top: 15px;
   font-size: 14px;
+  margin-left: 75px;
 }
 
 .signup-login-link {
   color: #1c3ee7;
   font-weight: 600;
   text-decoration: none;
+  
 }
 
 .signup-login-link:hover {

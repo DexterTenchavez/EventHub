@@ -1,6 +1,8 @@
 body{
-    background-color: black;
-    margin: 0;
+  background: linear-gradient(to right, #d25ac0, #950389);
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
     
 }
 
@@ -20,8 +22,9 @@ body{
 }
 
 .upcomingevents-topbar .title{
-    color: white;
-    font-size: 25px;
+    color: #ffffff;
+  font-size: 22px;
+  font-weight: bold;
 }
 .upcomingevents-topbar a{
     text-decoration: none;
@@ -43,26 +46,31 @@ body{
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
 }
 .upcomingevents-sidebar ul{
-    list-style: none;
-    padding: 0;
-
+     list-style: none;
+  padding: 0;
+  margin: 0;
 }
 .upcomingevents-sidebar ul li{
-    margin: 15px 0;
-padding: 15px;
+    margin: 10px 0;
 
 }
 
 .upcomingevents-sidebar ul li a{
-    text-decoration: none;
-    color: white;
-    font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 6px;
+     text-decoration: none;
+  color: #cfd8dc;
+  display: block;
+  padding: 12px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
 
 }
-.upcomingevents-sidebar ul .upcoming-currentpage{
- border-left: 4px solid #4CAF50; 
+
+.upcomingevents-sidebar ul li a:hover {
+background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+.upcoming-currentpage a{
+  border-left: 4px solid #4CAF50; 
   padding-left: 11px; 
   color: #4CAF50;
   font-weight: bold;

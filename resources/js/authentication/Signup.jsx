@@ -62,8 +62,10 @@ export default function Signup() {
 
   };
   return (
+    <div className="Sign-up">
+   
     <div className="signup-container">
-  <h2 className="signup-title">Sign Up</h2>
+   <h2 className="signup-title">Sign Up</h2>
   <form className="signup-form" onSubmit={handleRegister}>
     <input
       className="signup-input"
@@ -135,10 +137,11 @@ export default function Signup() {
     <button className="signup-btn" type="submit">Register</button>
   </form>
   
-  <p className="signup-login-text">
+  
+</div>
+<p className="signup-login-text">
     Already have an account? <Link className="signup-login-link" to="/">Login</Link> here
   </p>
-</div>
-
+ </div>
   );
 }

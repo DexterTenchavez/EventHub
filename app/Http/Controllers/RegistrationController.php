@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Event;
 use App\Models\Registration;
+use App\Models\User;
 
 class RegistrationController extends Controller
 {
-    // Register a user for an event
+   
     public function register($id, Request $request)
     {
         $event = Event::find($id);
@@ -26,6 +27,15 @@ class RegistrationController extends Controller
             return response()->json(['message' => 'User already registered'], 400);
         }
 
+        
+
+       $user = User::where('email', $request->email)->first();
+
+if ($user && $user->penalties >= 3) {
+    return response()->json(['message' => 'You are restricted from registering for events due to penalties.'], 403);
+}
+
+
         // Create registration
         $registration = Registration::create([
             'event_id' => $id,
@@ -34,7 +44,7 @@ class RegistrationController extends Controller
             'attendance' => 'pending',
         ]);
 
-        $event->load('registrations'); // load updated registrations
+        $event->load('registrations'); 
 
 return response()->json([
     'message' => 'User registered successfully',
@@ -43,7 +53,7 @@ return response()->json([
 
     }
 
-    // Unregister a user from an event
+   
     public function unregister($id, Request $request)
     {
         $registration = Registration::where('event_id', $id)

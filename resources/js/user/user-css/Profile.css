@@ -1,11 +1,13 @@
-body{
-    background-color: white;
-    margin: 0;
-    
+/* Profile.css */
+body {
+  background: linear-gradient(to right, #d25ac0, #950389);
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
 }
 
-.profile-topbar{
-     background: linear-gradient(90deg, #1a237e, #283593);
+.profile-topbar {
+  background: linear-gradient(90deg, #1a237e, #283593);
   height: 60px;
   display: flex;
   align-items: center;
@@ -19,52 +21,397 @@ body{
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
 
-.profile-topbar .title{
-    color: white;
-    font-size: 25px;
-}
-.profile-topbar a{
-    text-decoration: none;
-   
-    color: white;
-    display: block;
+.profile-topbar .title {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: bold;
 }
 
-.profile-sidebar{
-     width: 220px;
+.profile-topbar a {
+  text-decoration: none;
+  color: white;
+  display: block;
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.profile-topbar a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-sidebar {
+  width: 220px;
   height: 100vh;
   background: #1e1e1e;
   color: white;
-  padding-top: 70px; /* offset topbar */
+  padding-top: 70px;
   position: fixed;
   left: 0;
   top: 0;
   z-index: 90;
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
-}
-.profile-sidebar ul{
-    list-style: none;
-    padding: 0;
-
-}
-.profile-sidebar ul li{
-    margin: 15px 0;
-padding: 15px;
-
+  overflow-y: auto;
 }
 
-.profile-sidebar ul li a{
-    text-decoration: none;
-    color: white;
-    font-weight: 500;
-    padding: 8px 12px;
-    border-radius: 6px;
-
+.profile-sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
-.profile-sidebar ul .profile-currentpage{
- border-left: 4px solid #4CAF50; 
-  padding-left: 11px; 
+
+.profile-sidebar ul li {
+  margin: 5px 15px;
+}
+
+.profile-sidebar ul li a {
+  text-decoration: none;
+  color: #cfd8dc;
+  display: block;
+  padding: 12px 15px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  font-weight: 500;
+}
+
+.profile-sidebar ul li a:hover {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+  transform: translateX(5px);
+}
+
+.profile-currentpage a {
+  border-left: 4px solid #4CAF50;
+  padding-left: 11px;
   color: #4CAF50;
   font-weight: bold;
   background: rgba(255, 255, 255, 0.15);
+}
+
+.profile-page {
+  background: linear-gradient(to right, #d25ac0, #950389);
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+}
+
+.profile-content {
+  margin-left: 240px;
+  padding: 80px 40px 40px;
+  background: transparent;
+  min-height: calc(100vh - 120px);
+}
+
+.profile-header {
+  margin-bottom: 30px;
+}
+
+.profile-header h1 {
+  color: white;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.user-info-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 25px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-basic-info h2 {
+  color: white;
+  margin: 0 0 8px 0;
+  font-size: 1.8rem;
+}
+
+.user-basic-info p {
+  color: #ccc;
+  margin: 0 0 12px 0;
+  font-size: 1.1rem;
+}
+
+.user-status {
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.3);
+  display: inline-block;
+}
+
+.profile-section {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-section h2 {
+  color: white;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 10px;
+}
+
+/* Penalty Status */
+.penalty-status-card {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid;
+}
+
+.penalty-indicator {
+  margin-bottom: 15px;
+}
+
+.penalty-count {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.penalty-message {
+  color: #ccc;
+  font-size: 1rem;
+}
+
+.penalty-progress {
+  background: rgba(255, 255, 255, 0.2);
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+
+.penalty-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.ban-notice {
+  background: rgba(255, 82, 82, 0.2);
+  border: 1px solid rgba(255, 82, 82, 0.5);
+  padding: 12px;
+  border-radius: 6px;
+  color: #ff5252;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+/* Statistics Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 25px;
+  border-radius: 8px;
+  text-align: center;
+  transition: transform 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.stat-number {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  color: #ccc;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Events Table */
+.events-table-container {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: white;
+}
+
+.events-table th {
+  background: rgba(40, 53, 147, 0.8);
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.events-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.events-table tr:hover td {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.attendance-status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
+.attendance-status.present {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.attendance-status.absent {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.attendance-status.pending {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.no-events {
+  text-align: center;
+  padding: 40px;
+  color: #ccc;
+  font-style: italic;
+}
+
+/* Account Information */
+.account-info {
+  display: grid;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #ccc;
+}
+
+.info-item span {
+  color: white;
+  font-weight: 500;
+}
+
+/* Loading State */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  font-size: 1.2rem;
+  color: #ccc;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .profile-content {
+    margin-left: 0;
+    padding: 70px 20px 20px;
+  }
+  
+  .profile-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .profile-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .events-table {
+    font-size: 0.9rem;
+  }
+  
+  .events-table th,
+  .events-table td {
+    padding: 8px 10px;
+  }
+  
+  .profile-header h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-section {
+    padding: 15px;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .profile-topbar {
+    padding: 0 15px;
+  }
+  
+  .profile-topbar .title {
+    font-size: 18px;
+  }
+}
+
+/* Mobile menu button */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 5px;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+  }
 }

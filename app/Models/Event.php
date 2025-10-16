@@ -9,15 +9,20 @@ class Event extends Model
 {
     use HasFactory;
 
-    // These are the columns your table allows to be mass assigned
     protected $fillable = [
         'title',
         'description',
         'date',
+        'time', // Add time to fillable
         'location',
         'category',
     ];
 
+    protected $casts = [
+        'date' => 'date', // Keep as date only
+        
+    ];
+    
     public function registrations()
     {
         return $this->hasMany(Registration::class);

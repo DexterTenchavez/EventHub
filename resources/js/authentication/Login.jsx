@@ -28,7 +28,8 @@ export default function Login({ setCurrentUser }) {
 
   return (
     <div className="login-container">
-      <h2 className="login-title">Login</h2>
+      <h1 className="login-title">DAGOHOY EVENTHUB</h1>
+      <p className="login-txt">Login to your Account</p>
       <form className="login-form" onSubmit={handleLogin}>
         <input
           className="login-input"

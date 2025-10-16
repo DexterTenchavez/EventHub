@@ -1,6 +1,7 @@
 body {
   font-family: Arial, sans-serif;
-  background-color: #f0f4f8;
+ background: linear-gradient(to right, #d25ac0, #950389);
+
   margin: 0;
 }
 
@@ -13,9 +14,13 @@ body {
 }
 
 .login-title {
-  font-size: 28px;
-  color: #333;
+  font-size: 60px;
+  color: #fefdfd;
   margin-bottom: 20px;
+}
+
+.login-txt{
+  color: black;
 }
 
 .login-form {

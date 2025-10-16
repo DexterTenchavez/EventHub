@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Signup from "./authentication/SignUp";
 import React from "react";
 import Login from "./authentication/Login";
+
 import Admindashboard from "./admin/Admindashboard";
+import Userspenalties from "./admin/Userspenalties";
 import Userdashboard from "./user/Userdashboard";
 import Pastevents from "./user/Pastevents";
 import Upcomingevents from "./user/Upcomingevents";
@@ -48,6 +50,21 @@ export default function App() {
           }
         />
 
+        <Route 
+          path="/users-penalties" 
+          element={
+            currentUser ? (
+              currentUser.role === "admin" ? (
+                <Userspenalties />
+              ) : (
+                <Navigate to="/" />
+              )
+            ) : (
+              <div>Loading...</div>
+            )
+          } 
+        />
+
         <Route
           path="/user-dashboard"
           element={
@@ -68,9 +85,50 @@ export default function App() {
           }
         />
 
-        <Route path="/past-events" element={<Pastevents />} />
-        <Route path="/upcoming-events" element={<Upcomingevents />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route 
+          path="/past-events" 
+          element={
+            currentUser ? (
+              currentUser.role === "user" ? (
+                <Pastevents currentUser={currentUser} />
+              ) : (
+                <Navigate to="/" />
+              )
+            ) : (
+              <div>Loading...</div>
+            )
+          } 
+        />
+
+        <Route 
+          path="/upcoming-events" 
+          element={
+            currentUser ? (
+              currentUser.role === "user" ? (
+                <Upcomingevents currentUser={currentUser} />
+              ) : (
+                <Navigate to="/" />
+              )
+            ) : (
+              <div>Loading...</div>
+            )
+          } 
+        />
+
+        <Route 
+          path="/profile" 
+          element={
+            currentUser ? (
+              currentUser.role === "user" ? (
+                <Profile currentUser={currentUser} onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/" />
+              )
+            ) : (
+              <div>Loading...</div>
+            )
+          } 
+        />
       </Routes>
     </Router>
   );
