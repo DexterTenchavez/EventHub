@@ -48,6 +48,16 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+
+     public function toArray()
+    {
+        $array = parent::toArray();
+        // Ensure timestamps are always included
+        $array['created_at'] = $this->created_at;
+        $array['updated_at'] = $this->updated_at;
+        return $array;
+    }
+    
     protected function casts(): array
     {
         return [

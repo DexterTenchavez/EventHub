@@ -15,12 +15,45 @@ export default function Profile({ currentUser, onLogout }) {
   const [userEvents, setUserEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
       fetchUserData();
+      loadProfilePicture();
     }
   }, [currentUser]);
+
+  const loadProfilePicture = () => {
+    // Try to load profile picture from localStorage
+    const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
+    if (savedProfilePic) {
+      setProfilePicture(savedProfilePic);
+    } else {
+      // Set default profile picture based on user's name
+      setProfilePicture(generateDefaultAvatar(currentUser.name));
+    }
+  };
+
+  const generateDefaultAvatar = (name) => {
+    // Generate initials for default avatar
+    const initials = name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+    
+    // Create a simple SVG avatar with initials
+    const svg = `
+      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" fill="#4caf50" />
+        <text x="50" y="55" font-family="Arial, sans-serif" font-size="40" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+  };
 
   const fetchUserData = async () => {
     try {
@@ -102,6 +135,54 @@ export default function Profile({ currentUser, onLogout }) {
     }
   };
 
+  const handleProfilePictureUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file.');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Please select an image smaller than 5MB.');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Convert image to base64 for storage
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target.result;
+        
+        // Save to localStorage
+        localStorage.setItem(`profilePicture_${currentUser.id}`, imageData);
+        setProfilePicture(imageData);
+        
+        // Here you can also send the image to your backend if you have one
+        // await axios.post(`http://localhost:8000/api/users/${currentUser.id}/profile-picture`, {
+        //   profilePicture: imageData
+        // });
+        
+        setUploading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading profile picture:', error);
+      alert('Failed to upload profile picture. Please try again.');
+      setUploading(false);
+    }
+  };
+
+  const removeProfilePicture = () => {
+    localStorage.removeItem(`profilePicture_${currentUser.id}`);
+    setProfilePicture(generateDefaultAvatar(currentUser.name));
+  };
+
   const handleLogout = async () => {
     try {
       const res = await axios.post('http://localhost:8000/api/logout', {}, {
@@ -180,10 +261,50 @@ export default function Profile({ currentUser, onLogout }) {
           <h1>User Profile</h1>
           <div className="user-info-card">
             <div className="user-basic-info">
-              <h2>{currentUser.name}</h2>
-              <p>{currentUser.email}</p>
-              <div className="user-status" style={{ color: penaltyStatus.color }}>
-                Status: {penaltyStatus.status}
+              <div className="profile-picture-section">
+                <div className="profile-picture-container">
+                  <img 
+                    src={profilePicture} 
+                    alt="Profile" 
+                    className="profile-picture"
+                    onError={(e) => {
+                      e.target.src = generateDefaultAvatar(currentUser.name);
+                    }}
+                  />
+                  <div className="profile-picture-overlay">
+                    <label htmlFor="profile-picture-upload" className="upload-button">
+                      {uploading ? 'Uploading...' : '📷'}
+                    </label>
+                    <input
+                      id="profile-picture-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleProfilePictureUpload}
+                      disabled={uploading}
+                      style={{ display: 'none' }}
+                    />
+                  </div>
+                </div>
+                <div className="profile-picture-actions">
+                  <label htmlFor="profile-picture-upload" className="change-picture-btn">
+                    {uploading ? 'Uploading...' : 'Change Picture'}
+                  </label>
+                  <button 
+                    type="button" 
+                    className="remove-picture-btn"
+                    onClick={removeProfilePicture}
+                    disabled={uploading}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+              <div className="user-details">
+                <h2>{currentUser.name}</h2>
+                <p>{currentUser.email}</p>
+                <div className="user-status" style={{ color: penaltyStatus.color }}>
+                  Status: {penaltyStatus.status}
+                </div>
               </div>
             </div>
           </div>
@@ -278,27 +399,59 @@ export default function Profile({ currentUser, onLogout }) {
           )}
         </div>
 
-        <div className="profile-section">
-          <h2>Account Information</h2>
-          <div className="account-info">
-            <div className="info-item">
-              <label>User ID:</label>
-              <span>{currentUser.id}</span>
-            </div>
-            <div className="info-item">
-              <label>Email:</label>
-              <span>{currentUser.email}</span>
-            </div>
-            <div className="info-item">
-              <label>Member Since:</label>
-              <span>{currentUser.joinDate ? formatDate(currentUser.joinDate) : 'N/A'}</span>
-            </div>
-            <div className="info-item">
-              <label>Account Type:</label>
-              <span>Standard User</span>
-            </div>
-          </div>
-        </div>
+       <div className="profile-section">
+  <h2>Account Information</h2>
+  <div className="account-info">
+    <div className="info-item">
+      <label>User ID:</label>
+      <span>{currentUser.id}</span>
+    </div>
+    <div className="info-item">
+      <label>Email:</label>
+      <span>{currentUser.email}</span>
+    </div>
+    <div className="info-item">
+      <label>Username:</label>
+      <span>{currentUser.username || 'Not set'}</span>
+    </div>
+    <div className="info-item">
+      <label>Full Name:</label>
+      <span>{currentUser.name}</span>
+    </div>
+    <div className="info-item">
+      <label>Contact Number:</label>
+      <span>{currentUser.contactNo || 'Not provided'}</span>
+    </div>
+    <div className="info-item">
+      <label>Sex:</label>
+      <span>{currentUser.sex ? currentUser.sex.charAt(0).toUpperCase() + currentUser.sex.slice(1) : 'Not specified'}</span>
+    </div>
+    <div className="info-item">
+      <label>Date of Birth:</label>
+      <span>{currentUser.dob ? formatDate(currentUser.dob) : 'Not provided'}</span>
+    </div>
+    <div className="info-item">
+      <label>Barangay:</label>
+      <span>{currentUser.barangay || 'Not specified'}</span>
+    </div>
+    <div className="info-item">
+      <label>Purok:</label>
+      <span>{currentUser.purok || 'Not specified'}</span>
+    </div>
+    <div className="info-item">
+  <label>Member Since:</label>
+  <span>{currentUser.created_at ? formatDate(currentUser.created_at) : 'N/A'}</span>
+</div>
+    <div className="info-item">
+      <label>Account Type:</label>
+      <span>{currentUser.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : 'Standard User'}</span>
+    </div>
+    <div className="info-item">
+      <label>Penalties:</label>
+      <span>{currentUser.penalties || 0}</span>
+    </div>
+  </div>
+</div>
       </div>
     </div>
   );

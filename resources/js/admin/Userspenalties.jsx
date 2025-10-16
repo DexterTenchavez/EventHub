@@ -3,38 +3,99 @@ import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import "./admin-css/userspenalties.css";
 
-export default function Userspenalties() {
+export default function Userspenalties({ currentUser, onLogout }) {
   const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userRegistrations, setUserRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Fetch all users
+  useEffect(() => {
+    console.log("Userspenalties component mounted");
+    console.log("Current user:", currentUser);
+    
+    if (currentUser && currentUser.role === "admin") {
+      fetchAllData();
+    } else {
+      setLoading(false);
+    }
+  }, [currentUser]);
+
+  const fetchAllData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      await Promise.all([
+        fetchUsers(),
+        fetchEvents()
+      ]);
+      // Don't fetch registrations for now since the endpoint doesn't exist
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError("Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchUsers = async () => {
     try {
+      console.log("Fetching users...");
       const res = await axios.get("http://localhost:8000/api/users");
       console.log("Fetched users:", res.data);
       setUsers(res.data);
     } catch (err) {
       console.error("Error fetching users:", err);
+      throw err;
     }
   };
 
-  // Fetch all events with registrations
   const fetchEvents = async () => {
     try {
+      console.log("Fetching events...");
       const res = await axios.get("http://localhost:8000/api/events");
+      console.log("Fetched events:", res.data);
       setEvents(res.data);
     } catch (err) {
       console.error("Error fetching events:", err);
+      throw err;
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-    fetchEvents();
-  }, []);
+  // Get registrations from events data instead of separate API
+  const getAllRegistrations = () => {
+    const allRegistrations = [];
+    events.forEach(event => {
+      if (event.registrations && Array.isArray(event.registrations)) {
+        event.registrations.forEach(reg => {
+          allRegistrations.push({
+            ...reg,
+            eventId: event.id,
+            eventName: event.title || event.name
+          });
+        });
+      }
+    });
+    return allRegistrations;
+  };
 
+  // Get users with their registration data
+  const getUsersWithRegistrations = () => {
+    const allRegistrations = getAllRegistrations();
+    
+    return users.map(user => ({
+      ...user,
+      registrations: allRegistrations.filter(reg => 
+        reg.userId === user.id || reg.email === user.email
+      )
+    }));
+  };
+
+  const usersWithRegistrations = getUsersWithRegistrations();
+
+  // Rest of your component remains the same...
   // Close mobile menu when clicking on a link
   const handleNavClick = () => {
     setMobileMenuOpen(false);
@@ -81,6 +142,8 @@ export default function Userspenalties() {
 
       alert(response.data.message || "Logged out successfully");
       localStorage.removeItem("token");
+      localStorage.removeItem("currentUser");
+      if (onLogout) onLogout();
       navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -104,7 +167,7 @@ export default function Userspenalties() {
     let totalPending = 0;
 
     events.forEach(event => {
-      if (event.registrations) {
+      if (event.registrations && Array.isArray(event.registrations)) {
         event.registrations.forEach(reg => {
           if (reg.attendance === 'present') totalPresent++;
           else if (reg.attendance === 'absent') totalAbsent++;
@@ -119,9 +182,42 @@ export default function Userspenalties() {
   const userStats = getUserStats();
   const attendanceStats = getAttendanceStats();
 
+  // Add loading and error states at the beginning of return
+  if (loading) {
+    return (
+      <div className="penalty-page">
+        <div className="loading">Loading users and penalties data...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="penalty-page">
+        <div className="error-message">
+          <h2>Error Loading Page</h2>
+          <p>{error}</p>
+          <button onClick={fetchAllData}>Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return (
+      <div className="penalty-page">
+        <div className="access-denied">
+          <h2>Access Denied</h2>
+          <p>You must be an admin to view this page.</p>
+          <Link to="/">Go to Login</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="penalty-page">
-      {/* Top bar */}
+      {/* Your existing JSX remains the same */}
       <div className="penalty-topbars">
         <button 
           className="mobile-menu-btn"
@@ -135,7 +231,6 @@ export default function Userspenalties() {
         </Link>
       </div>
 
-      {/* Sidebar */}
       <div className={`penalty-sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <ul>
           <li>
@@ -147,7 +242,6 @@ export default function Userspenalties() {
         </ul>
       </div>
 
-      {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div 
           className="mobile-overlay"
@@ -155,11 +249,9 @@ export default function Userspenalties() {
         />
       )}
 
-      {/* Main Content */}
       <div className="penalty-content">
         <h1>User & Penalty Management</h1>
         
-        {/* User Statistics Cards */}
         <div className="penalty-stats">
           <div className="stat-card">
             <h3>Total Users</h3>
@@ -175,7 +267,6 @@ export default function Userspenalties() {
           </div>
         </div>
 
-        {/* Attendance Statistics Cards */}
         <div className="penalty-section">
           <h2>Attendance Overview</h2>
           <div className="attendance-stats">
@@ -202,10 +293,9 @@ export default function Userspenalties() {
           </div>
         </div>
 
-        {/* Users Table */}
         <div className="penalty-section">
-          <h2>User Penalties</h2>
-          <p>Manage user penalties and monitor user status.</p>
+          <h2>User Penalties & Attendance</h2>
+          <p>Manage user penalties and monitor attendance status.</p>
           
           <div className="penalty-table-container">
             <table className="penalty-table">
@@ -213,57 +303,83 @@ export default function Userspenalties() {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Registered Events</th>
+                  <th>Present</th>
+                  <th>Absent</th>
+                  <th>Pending</th>
+                  <th>Total Events</th>
                   <th>Penalties</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {users.length > 0 ? (
-                  users
+                {usersWithRegistrations.length > 0 ? (
+                  usersWithRegistrations
                     .filter((u) => u.role === "user")
-                    .map((u) => (
-                      <tr key={u.id}>
-                        <td>{u.name}</td>
-                        <td>{u.email}</td>
-                        <td>{u.registrations_count || 0}</td>
-                        <td className={
-                          u.penalties >= 3 ? "penalty-high" :
-                          u.penalties > 0 ? "penalty-warning" : "penalty-none"
-                        }>
-                          {u.penalties}
-                        </td>
-                        <td>
-                          {u.penalties >= 3 ? (
-                            <span className="status-banned">Banned</span>
-                          ) : u.penalties > 0 ? (
-                            <span className="status-warning">Warning</span>
-                          ) : (
-                            <span className="status-clean">Clean</span>
-                          )}
-                        </td>
-                        <td className="action-buttons">
-                          <button
-                            className="add-penalty-btn"
-                            onClick={() => handleAddPenalty(u.id)}
-                            disabled={u.penalties >= 3}
-                          >
-                            + Add Penalty
-                          </button>
-                          <button
-                            className="remove-penalty-btn"
-                            onClick={() => handleDecreasePenalty(u.id)}
-                            disabled={u.penalties <= 0}
-                          >
-                            - Remove Penalty
-                          </button>
-                        </td>
-                      </tr>
-                    ))
+                    .map((u) => {
+                      const userRegistrations = u.registrations || [];
+                      const totalPresent = userRegistrations.filter(reg => reg.attendance === 'present').length;
+                      const totalAbsent = userRegistrations.filter(reg => reg.attendance === 'absent').length;
+                      const totalPending = userRegistrations.filter(reg => !reg.attendance || reg.attendance === 'pending').length;
+                      const totalEvents = userRegistrations.length;
+
+                      return (
+                        <tr key={u.id}>
+                          <td>{u.name}</td>
+                          <td>{u.email}</td>
+                          <td className="attendance-present">
+                            <div className="attendance-count">{totalPresent}</div>
+                            <div className="attendance-label">Present</div>
+                          </td>
+                          <td className="attendance-absent">
+                            <div className="attendance-count">{totalAbsent}</div>
+                            <div className="attendance-label">Absent</div>
+                          </td>
+                          <td className="attendance-pending">
+                            <div className="attendance-count">{totalPending}</div>
+                            <div className="attendance-label">Pending</div>
+                          </td>
+                          <td className="attendance-total">
+                            <div className="attendance-count">{totalEvents}</div>
+                            <div className="attendance-label">Total</div>
+                          </td>
+                          <td className={
+                            u.penalties >= 3 ? "penalty-high" :
+                            u.penalties > 0 ? "penalty-warning" : "penalty-none"
+                          }>
+                            {u.penalties}
+                          </td>
+                          <td>
+                            {u.penalties >= 3 ? (
+                              <span className="status-banned">Banned</span>
+                            ) : u.penalties > 0 ? (
+                              <span className="status-warning">Warning</span>
+                            ) : (
+                              <span className="status-clean">Clean</span>
+                            )}
+                          </td>
+                          <td className="action-buttons">
+                            <button
+                              className="add-penalty-btn"
+                              onClick={() => handleAddPenalty(u.id)}
+                              disabled={u.penalties >= 3}
+                            >
+                              + Add Penalty
+                            </button>
+                            <button
+                              className="remove-penalty-btn"
+                              onClick={() => handleDecreasePenalty(u.id)}
+                              disabled={u.penalties <= 0}
+                            >
+                              - Remove Penalty
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
                 ) : (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: "center" }}>
+                    <td colSpan="9" style={{ textAlign: "center" }}>
                       No users found.
                     </td>
                   </tr>

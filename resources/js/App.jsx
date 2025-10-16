@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Signup from "./authentication/SignUp";
 import React from "react";
 import Login from "./authentication/Login";
-
 import Admindashboard from "./admin/Admindashboard";
 import Userspenalties from "./admin/Userspenalties";
 import Userdashboard from "./user/Userdashboard";
@@ -14,16 +13,33 @@ import Profile from "./user/Profile";
 export default function App() {
   const [events, setEvents] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    console.log("Stored user from localStorage:", storedUser);
+    
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setCurrentUser(userData);
+      } catch (error) {
+        console.error("Error parsing stored user:", error);
+        localStorage.removeItem("currentUser");
+      }
+    }
+    setLoading(false);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
+    localStorage.removeItem("token");
     setCurrentUser(null);
   };
+
+  if (loading) {
+    return <div className="loading">Loading application...</div>;
+  }
 
   return (
     <Router>
@@ -31,6 +47,7 @@ export default function App() {
         <Route path="/" element={<Login setCurrentUser={setCurrentUser} />} />
         <Route path="/signup" element={<Signup />} />
 
+        {/* Admin Routes */}
         <Route
           path="/admin-dashboard"
           element={
@@ -39,13 +56,14 @@ export default function App() {
                 <Admindashboard
                   events={events}
                   setEvents={setEvents}
+                  currentUser={currentUser}
                   onLogout={handleLogout}
                 />
               ) : (
-                <Navigate to="/" />
+                <Navigate to="/" replace />
               )
             ) : (
-              <div>Loading...</div>
+              <Navigate to="/" replace />
             )
           }
         />
@@ -55,16 +73,20 @@ export default function App() {
           element={
             currentUser ? (
               currentUser.role === "admin" ? (
-                <Userspenalties />
+                <Userspenalties 
+                  currentUser={currentUser} 
+                  onLogout={handleLogout} 
+                />
               ) : (
-                <Navigate to="/" />
+                <Navigate to="/" replace />
               )
             ) : (
-              <div>Loading...</div>
+              <Navigate to="/" replace />
             )
           } 
         />
 
+        {/* User Routes */}
         <Route
           path="/user-dashboard"
           element={
@@ -77,10 +99,10 @@ export default function App() {
                   onLogout={handleLogout}
                 />
               ) : (
-                <Navigate to="/" />
+                <Navigate to="/" replace />
               )
             ) : (
-              <div>Loading...</div>
+              <Navigate to="/" replace />
             )
           }
         />
@@ -90,12 +112,12 @@ export default function App() {
           element={
             currentUser ? (
               currentUser.role === "user" ? (
-                <Pastevents currentUser={currentUser} />
+                <Pastevents currentUser={currentUser} onLogout={handleLogout} />
               ) : (
-                <Navigate to="/" />
+                <Navigate to="/" replace />
               )
             ) : (
-              <div>Loading...</div>
+              <Navigate to="/" replace />
             )
           } 
         />
@@ -105,12 +127,12 @@ export default function App() {
           element={
             currentUser ? (
               currentUser.role === "user" ? (
-                <Upcomingevents currentUser={currentUser} />
+                <Upcomingevents currentUser={currentUser} onLogout={handleLogout} />
               ) : (
-                <Navigate to="/" />
+                <Navigate to="/" replace />
               )
             ) : (
-              <div>Loading...</div>
+              <Navigate to="/" replace />
             )
           } 
         />
@@ -122,13 +144,27 @@ export default function App() {
               currentUser.role === "user" ? (
                 <Profile currentUser={currentUser} onLogout={handleLogout} />
               ) : (
-                <Navigate to="/" />
+                <Navigate to="/" replace />
               )
             ) : (
-              <div>Loading...</div>
+              <Navigate to="/" replace />
             )
           } 
         />
+
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+        // In App.js, temporarily add this route for testing:
+<Route 
+  path="/test-penalties" 
+  element={
+    <div>
+      <h1>Test Page - Users Penalties</h1>
+      <p>If you can see this, routing is working.</p>
+      <button onClick={() => window.history.back()}>Go Back</button>
+    </div>
+  } 
+/>
       </Routes>
     </Router>
   );

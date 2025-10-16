@@ -68,6 +68,7 @@ body{
 .upcomingevents-sidebar ul li a:hover {
 background: rgba(76, 175, 80, 0.15);
   color: #4caf50;
+  transform: translateX(5px);
 }
 .upcoming-currentpage a{
   border-left: 4px solid #4CAF50; 

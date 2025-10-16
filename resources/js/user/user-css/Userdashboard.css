@@ -80,6 +80,7 @@ body {
 .user-sidebar ul li a:hover {
   background: rgba(76, 175, 80, 0.15);
   color: #4caf50;
+  transform: translateX(5px);
 }
 
 .user-currentpage a {

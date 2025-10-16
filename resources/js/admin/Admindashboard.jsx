@@ -9,6 +9,8 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   const [editId, setEditId] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false); // ADD: Loading state
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -28,7 +30,19 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         console.error("Failed to fetch events:", err);
       }
     };
+
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get("http://localhost:8000/api/users");
+        console.log("Fetched users:", res.data);
+        setUsers(res.data);
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      }
+    };
+
     fetchEvents();
+    fetchUsers();
   }, []);
 
   // Close mobile menu when clicking on a link
@@ -55,10 +69,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   };
 
   const handleSubmit = async () => {
+    // Prevent multiple submissions
+    if (loading) return;
+
     if (!formData.title || !formData.date || !formData.time || !formData.location || !formData.description) {
       alert("Please fill in all required fields including time");
       return;
     }
+
+    setLoading(true); // Start loading
 
     try {
       const payload = {
@@ -86,6 +105,8 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     } catch (err) {
       console.error(err);
       alert(err.response?.data?.message || "Failed to submit event");
+    } finally {
+      setLoading(false); // End loading regardless of success/error
     }
   };
 
@@ -259,6 +280,22 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     }
   };
 
+  // FIXED: Safe getUserDetails function
+  const getUserDetails = (email) => {
+    if (!users || !Array.isArray(users)) {
+      return { barangay: 'N/A', purok: 'N/A' };
+    }
+    
+    const user = users.find(u => u.email === email);
+    return user ? { 
+      barangay: user.barangay || 'N/A', 
+      purok: user.purok || 'N/A' 
+    } : { 
+      barangay: 'N/A', 
+      purok: 'N/A' 
+    };
+  };
+
   return (
     <div className="body">
       <div className="topbars">
@@ -329,56 +366,116 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         </div>
 
         {showModal && (
-          <div className="admin-modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="admin-modal-overlay" onClick={() => !loading && setShowModal(false)}>
             <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
               <div className="admin-modal-header">
                 <h2>{isEditing ? "Edit Event" : "Create Event"}</h2>
-                <button className="admin-modal-close" onClick={() => setShowModal(false)}>×</button>
+                <button 
+                  className="admin-modal-close" 
+                  onClick={() => !loading && setShowModal(false)}
+                  disabled={loading}
+                >
+                  ×
+                </button>
               </div>
               <div className="admin-form">
-                <div className="admin-form-group">
-                  <label>Title *</label>
-                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} />
-                </div>
-                <div className="admin-form-group">
-                  <label>Category *</label>
-                  <select name="category" value={formData.category} onChange={handleInputChange}>
-                    <option value="Tech Conference">Tech Conference</option>
-                    <option value="Music Festival">Music Festival</option>
-                    <option value="Workshop">Workshop</option>
-                  </select>
-                </div>
-                <div className="admin-form-group">
-                  <label>Description *</label>
-                  <textarea name="description" value={formData.description} onChange={handleInputChange} rows="4" />
-                </div>
-                <div className="admin-form-group">
-                  <label>Date *</label>
-                  <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleInputChange}
-                    min={new Date().toISOString().split("T")[0]}
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Time *</label>
-                  <input
-                    type="time"
-                    name="time"
-                    value={formData.time}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Location *</label>
-                  <input type="text" name="location" value={formData.location} onChange={handleInputChange} />
-                </div>
-                <div className="admin-form-actions">
-                  <button className="admin-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button className="admin-btn-submit" onClick={handleSubmit}>{isEditing ? "Update" : "Create"}</button>
+                {/* Loading Overlay */}
+                {loading && (
+                  <div className="modal-loading-overlay">
+                    <div className="modal-loading-spinner"></div>
+                    <p>{isEditing ? "Updating Event..." : "Creating Event..."}</p>
+                  </div>
+                )}
+                
+                <div className={loading ? "form-content loading" : "form-content"}>
+                  <div className="admin-form-group">
+                    <label>Title *</label>
+                    <input 
+                      type="text" 
+                      name="title" 
+                      value={formData.title} 
+                      onChange={handleInputChange}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Category *</label>
+                    <select 
+                      name="category" 
+                      value={formData.category} 
+                      onChange={handleInputChange}
+                      disabled={loading}
+                    >
+                      <option value="Tech Conference">Tech Conference</option>
+                      <option value="Music Festival">Music Festival</option>
+                      <option value="Workshop">Workshop</option>
+                    </select>
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Description *</label>
+                    <textarea 
+                      name="description" 
+                      value={formData.description} 
+                      onChange={handleInputChange} 
+                      rows="4"
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Date *</label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={formData.date}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().split("T")[0]}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Time *</label>
+                    <input
+                      type="time"
+                      name="time"
+                      value={formData.time}
+                      onChange={handleInputChange}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>Location *</label>
+                    <input 
+                      type="text" 
+                      name="location" 
+                      value={formData.location} 
+                      onChange={handleInputChange}
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="admin-form-actions">
+                    <button 
+                      className="admin-btn-cancel" 
+                      onClick={() => setShowModal(false)}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      className={`admin-btn-submit ${loading ? 'loading' : ''}`} 
+                      onClick={handleSubmit}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <span className="button-spinner"></span>
+                          {isEditing ? "Updating..." : "Creating..."}
+                        </>
+                      ) : (
+                        isEditing ? "Update" : "Create"
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -387,7 +484,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
 
         {selectedEvent && (
           <div className="admin-modal-overlay" onClick={() => setSelectedEvent(null)}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
               <div className="admin-modal-header">
                 <h2>Registrations for {selectedEvent.title}</h2>
                 <button className="admin-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
@@ -396,46 +493,52 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                 {selectedEvent.registrations && selectedEvent.registrations.length > 0 ? (
                   <div>
                     <p><strong>Total Registrations:</strong> {selectedEvent.registrations.length}</p>
-                    <table className="admin-table">
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Attendance</th>
-                          <th>Toggle Attendance</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedEvent.registrations.map((reg) => (
-                          <tr key={reg.id}>
-                            <td>{reg.name}</td>
-                            <td>{reg.email}</td>
-                            <td className={
-                              reg.attendance === 'present' ? 'status-present' :
-                              reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
-                            }>
-                              {reg.attendance || "Pending"}
-                            </td>
-                            <td className="attendance-actions">
-                              <button 
-                                className="btn-present"
-                                onClick={() => toggleAttendance(selectedEvent.id, reg.id, "present")}
-                                disabled={reg.attendance === 'present'}
-                              >
-                                Present
-                              </button>
-                              <button 
-                                className="btn-absent"
-                                onClick={() => toggleAttendance(selectedEvent.id, reg.id, "absent")}
-                                disabled={reg.attendance === 'absent'}
-                              >
-                                Absent
-                              </button>
-                            </td>
+                    <div className="table-container">
+                      <table className="admin-table responsive-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Barangay</th>
+                            <th>Purok</th>
+                            <th>Attendance</th>
+                            <th>Actions</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {selectedEvent.registrations.map((reg) => (
+                            <tr key={reg.id}>
+                              <td data-label="Name">{reg.name}</td>
+                              <td data-label="Email">{reg.email}</td>
+                              <td data-label="Barangay">{getUserDetails(reg.email).barangay}</td>
+                              <td data-label="Purok">{getUserDetails(reg.email).purok}</td>
+                              <td data-label="Attendance" className={
+                                reg.attendance === 'present' ? 'status-present' :
+                                reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
+                              }>
+                                {reg.attendance || "Pending"}
+                              </td>
+                              <td data-label="Actions" className="attendance-actions">
+                                <button 
+                                  className="btn-present"
+                                  onClick={() => toggleAttendance(selectedEvent.id, reg.id, "present")}
+                                  disabled={reg.attendance === 'present'}
+                                >
+                                  Present
+                                </button>
+                                <button 
+                                  className="btn-absent"
+                                  onClick={() => toggleAttendance(selectedEvent.id, reg.id, "absent")}
+                                  disabled={reg.attendance === 'absent'}
+                                >
+                                  Absent
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 ) : (
                   <p>No registrations yet.</p>
