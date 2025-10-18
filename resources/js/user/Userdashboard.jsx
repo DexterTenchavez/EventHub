@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
-export default function Userdashboard({ events = [], setEvents, currentUser, onLogout }) {
+export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser, onL
           if (!events.some((e) => e.id === event.id)) {
             if (Notification.permission === "granted") {
               new Notification("New Event Created!", {
-                body: `${event.title} on ${new Date(event.date).toLocaleDateString()} at ${formatTimeDisplay(event.time)}`,
+                body: `${event.title} on ${new Date(event.date).toLocaleDateString()} at ${getTimeRange(event)}`,
                 icon: "/favicon.ico",
               });
             }
@@ -105,39 +105,95 @@ export default function Userdashboard({ events = [], setEvents, currentUser, onL
     return () => clearInterval(interval);
   }, [events]);
 
- // Add this to your User Dashboard component
-const formatTimeDisplay = (timeValue) => {
-  if (!timeValue) return 'Time not set';
-  
-  const timeParts = timeValue.split(':');
-  const hours = parseInt(timeParts[0]);
-  const minutes = timeParts[1];
-  
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const displayHour = hours % 12 || 12;
-  
-  return `${displayHour}:${minutes} ${ampm}`;
-};
+  const formatTimeDisplay = (timeValue) => {
+    if (!timeValue) return 'Time not set';
+    
+    if (timeValue.includes('-')) {
+      const timeParts = timeValue.split('-');
+      const startTime = formatTimeDisplay(timeParts[0].trim());
+      const endTime = formatTimeDisplay(timeParts[1].trim());
+      return `${startTime} - ${endTime}`;
+    }
+    
+    const timeParts = timeValue.split(':');
+    const hours = parseInt(timeParts[0]);
+    const minutes = timeParts[1] || '00';
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
 
-  const handleLogout = async () => {
-    try {
-      const res = await axios.post('http://localhost:8000/api/logout', {}, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+  const getTimeRange = (event) => {
+    if (event.start_time && event.end_time) {
+      const startTime = formatTimeDisplay(event.start_time);
+      const endTime = formatTimeDisplay(event.end_time);
+      return `${startTime} - ${endTime}`;
+    } else if (event.time && event.time.includes('-')) {
+      return formatTimeDisplay(event.time);
+    } else if (event.time) {
+      return formatTimeDisplay(event.time);
+    }
+    return 'Time not set';
+  };
 
-      console.log("Logout response:", res.data);
-      alert(res.data.message);
-
-      localStorage.removeItem('token');
-      onLogout();
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
+  const getEventStatus = (event) => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    
+    let startTime = null;
+    let endTime = null;
+    
+    if (event.start_time && event.end_time) {
+      const [startHours, startMinutes] = event.start_time.split(':').map(Number);
+      const [endHours, endMinutes] = event.end_time.split(':').map(Number);
+      
+      startTime = new Date(eventDate);
+      startTime.setHours(startHours, startMinutes, 0, 0);
+      
+      endTime = new Date(eventDate);
+      endTime.setHours(endHours, endMinutes, 0, 0);
+    } 
+    else if (event.time && event.time.includes('-')) {
+      const timeParts = event.time.split('-');
+      const startPart = timeParts[0].trim();
+      const endPart = timeParts[1].trim();
+      
+      const [startHours, startMinutes] = startPart.split(':').map(Number);
+      const [endHours, endMinutes] = endPart.split(':').map(Number);
+      
+      startTime = new Date(eventDate);
+      startTime.setHours(startHours, startMinutes, 0, 0);
+      
+      endTime = new Date(eventDate);
+      endTime.setHours(endHours, endMinutes, 0, 0);
+    }
+    
+    if (startTime && endTime) {
+      if (now < startTime) {
+        return "upcoming";
+      } else if (now >= startTime && now <= endTime) {
+        return "present";
+      } else {
+        return "past";
+      }
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    
+    if (eventDate.getTime() === today.getTime()) {
+      return "present";
+    } else if (eventDate > today) {
+      return "upcoming";
+    } else {
+      return "past";
     }
   };
+
+ 
 
   return (
     <div>
@@ -149,7 +205,10 @@ const formatTimeDisplay = (timeValue) => {
           ☰
         </button>
         <h3 className="title">EventHub</h3>
-        <Link to="/" onClick={handleLogout}>Logout</Link>
+         <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+          <span className="profile-icon">👤</span>
+          Profile
+        </Link>
       </div>
 
       <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -161,11 +220,9 @@ const formatTimeDisplay = (timeValue) => {
             <Link to="/upcoming-events" onClick={handleNavClick}>Upcoming Events</Link>
           </li>
           <li>
-            <Link to="/past-events" onClick={handleNavClick}>Past Events</Link>
+            <Link to="/past-events" onClick={handleNavClick}>Events History</Link>
           </li>
-          <li>
-            <Link to="/profile" onClick={handleNavClick}>Profile</Link>
-          </li>
+          
         </ul>
       </div>
 
@@ -173,15 +230,6 @@ const formatTimeDisplay = (timeValue) => {
         <div 
           className="mobile-overlay"
           onClick={() => setMobileMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 80
-          }}
         />
       )}
 
@@ -197,37 +245,54 @@ const formatTimeDisplay = (timeValue) => {
         ) : (
           <div className="event-card-container">
             {events.map(event => {
-              const eventDate = new Date(event.date);
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              eventDate.setHours(0, 0, 0, 0);
-
-              let status = "";
-              if (eventDate.getTime() === today.getTime()) status = "present";
-              else if (eventDate.getTime() > today.getTime()) status = "upcoming";
-              else status = "past";
-
+              const status = getEventStatus(event);
               const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
 
               return (
                 <div className="event-card" key={event.id}>
                   <h3>{event.title}</h3>
                   <p><strong>Category:</strong> {event.category}</p>
-                 <p><strong>Date & Time:</strong> {new Date(event.date).toLocaleDateString('en-US', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-})} at {formatTimeDisplay(event.time)}</p>
+                  <p><strong>Date & Time:</strong> {new Date(event.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })} at {getTimeRange(event)}</p>
                   <p><strong>Location:</strong> {event.location}</p>
-                  <p><strong>Description:</strong> {event.description}</p>
-                  <p><strong>Status:</strong> {status}</p>
+                  
+                  {/* FIXED: Scrollable description area */}
+                  <div className="event-description-container">
+                    <div className="event-description-label">Description:</div>
+                    <div className="event-description-scroll">
+                      <p className="event-description-text">{event.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="event-card-footer">
+                    <p><strong>Status:</strong> 
+                      <span className={`status-badge ${status}`}>
+                        {status === "upcoming" ? "Upcoming" : 
+                         status === "present" ? "Happening Now" : 
+                         "Past Event"}
+                      </span>
+                    </p>
 
-                  <button
-                    onClick={() => handleRegisterToggle(event.id)}
-                    className={isRegistered ? "cancel-btn" : "register-btn"}
-                  >
-                    {isRegistered ? "Cancel Registration" : "Register Now"}
-                  </button>
+                    {status === "upcoming" && (
+                      <button
+                        onClick={() => handleRegisterToggle(event.id)}
+                        className={isRegistered ? "cancel-btn" : "register-btn"}
+                      >
+                        {isRegistered ? "Cancel Registration" : "Register Now"}
+                      </button>
+                    )}
+
+                    {status === "present" && (
+                      <p className="present-event-message">Event is currently happening - Registration closed</p>
+                    )}
+
+                    {status === "past" && (
+                      <p className="past-event-message">This event has already passed</p>
+                    )}
+                  </div>
                 </div>
               );
             })}

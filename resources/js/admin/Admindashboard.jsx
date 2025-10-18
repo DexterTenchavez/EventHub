@@ -10,12 +10,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false); // ADD: Loading state
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     date: "",
-    time: "",
+    startTime: "",
+    endTime: "",
     location: "",
     category: "Tech Conference",
   });
@@ -24,7 +25,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     const fetchEvents = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/events");
-        console.log("Raw event data:", res.data);
         setEvents(res.data);
       } catch (err) {
         console.error("Failed to fetch events:", err);
@@ -34,7 +34,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     const fetchUsers = async () => {
       try {
         const res = await axios.get("http://localhost:8000/api/users");
-        console.log("Fetched users:", res.data);
         setUsers(res.data);
       } catch (err) {
         console.error("Failed to fetch users:", err);
@@ -45,7 +44,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     fetchUsers();
   }, []);
 
-  // Close mobile menu when clicking on a link
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
@@ -62,34 +60,34 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       title: "",
       description: "",
       date: "",
-      time: "",
+      startTime: "",
+      endTime: "",
       location: "",
       category: "Tech Conference",
     });
   };
 
   const handleSubmit = async () => {
-    // Prevent multiple submissions
     if (loading) return;
 
-    if (!formData.title || !formData.date || !formData.time || !formData.location || !formData.description) {
-      alert("Please fill in all required fields including time");
+    if (!formData.title || !formData.date || !formData.startTime || !formData.endTime || !formData.location || !formData.description) {
+      alert("Please fill in all required fields including start and end time");
       return;
     }
 
-    setLoading(true); // Start loading
+    setLoading(true);
 
     try {
       const payload = {
         title: formData.title,
         description: formData.description,
         date: formData.date,
-        time: formData.time,
+        start_time: formData.startTime,
+        end_time: formData.endTime,
+        time: `${formData.startTime} - ${formData.endTime}`,
         location: formData.location,
         category: formData.category,
       };
-
-      console.log("Sending payload:", payload);
 
       let res;
       if (isEditing) {
@@ -103,24 +101,36 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       }
       setShowModal(false);
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to submit event");
+      console.error("Error:", err);
+      if (err.response?.data?.errors) {
+        const errors = err.response.data.errors;
+        let errorMessage = "Please fix the following errors:\n\n";
+        Object.keys(errors).forEach(key => {
+          errorMessage += `• ${key}: ${errors[key].join(', ')}\n`;
+        });
+        alert(errorMessage);
+      } else if (err.response?.data?.message) {
+        alert(`Error: ${err.response.data.message}`);
+      } else {
+        alert("Failed to submit event.");
+      }
     } finally {
-      setLoading(false); // End loading regardless of success/error
+      setLoading(false);
     }
   };
 
   const handleEdit = (event) => {
     const eventDate = new Date(event.date);
     const dateString = eventDate.toISOString().slice(0, 10);
-    
-    const timeString = event.time || "";
+    const startTime = event.start_time || '';
+    const endTime = event.end_time || '';
     
     setFormData({
       title: event.title,
       description: event.description,
       date: dateString,
-      time: timeString,
+      startTime: startTime,
+      endTime: endTime,
       location: event.location,
       category: event.category,
     });
@@ -142,27 +152,78 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     }
   };
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const getEventStatus = (event) => {
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    
+    let startTime = null;
+    let endTime = null;
+    
+    if (event.start_time && event.end_time) {
+      const [startHours, startMinutes] = event.start_time.split(':').map(Number);
+      const [endHours, endMinutes] = event.end_time.split(':').map(Number);
+      
+      startTime = new Date(eventDate);
+      startTime.setHours(startHours, startMinutes, 0, 0);
+      
+      endTime = new Date(eventDate);
+      endTime.setHours(endHours, endMinutes, 0, 0);
+    } 
+    else if (event.time && event.time.includes('-')) {
+      const timeParts = event.time.split('-');
+      const startPart = timeParts[0].trim();
+      const endPart = timeParts[1].trim();
+      
+      const [startHours, startMinutes] = startPart.split(':').map(Number);
+      const [endHours, endMinutes] = endPart.split(':').map(Number);
+      
+      startTime = new Date(eventDate);
+      startTime.setHours(startHours, startMinutes, 0, 0);
+      
+      endTime = new Date(eventDate);
+      endTime.setHours(endHours, endMinutes, 0, 0);
+    }
+    
+    if (startTime && endTime) {
+      if (now < startTime) {
+        return "upcoming";
+      } else if (now >= startTime && now <= endTime) {
+        return "present";
+      } else {
+        return "past";
+      }
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    
+    if (eventDate.getTime() === today.getTime()) {
+      return "present";
+    } else if (eventDate > today) {
+      return "upcoming";
+    } else {
+      return "past";
+    }
+  };
 
   const eventsWithStatus = (events || []).map((event) => {
-    const eventDate = new Date(event.date);
-    eventDate.setHours(0, 0, 0, 0);
-
-    let status = "";
-    if (eventDate.getTime() === today.getTime()) status = "present";
-    else if (eventDate.getTime() > today.getTime()) status = "upcoming";
-    else status = "past";
-
-    return { ...event, status };
+    return { ...event, status: getEventStatus(event) };
   });
 
   const formatTimeDisplay = (timeValue) => {
     if (!timeValue) return 'Time not set';
     
+    if (timeValue.includes('-')) {
+      const timeParts = timeValue.split('-');
+      const startTime = formatTimeDisplay(timeParts[0].trim());
+      const endTime = formatTimeDisplay(timeParts[1].trim());
+      return `${startTime} - ${endTime}`;
+    }
+    
     const timeParts = timeValue.split(':');
     const hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1];
+    const minutes = timeParts[1] || '00';
     
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const displayHour = hours % 12 || 12;
@@ -170,36 +231,38 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
-  // FIXED: Update attendance and save to backend
+  const getTimeRange = (event) => {
+    if (event.start_time && event.end_time) {
+      const startTime = formatTimeDisplay(event.start_time);
+      const endTime = formatTimeDisplay(event.end_time);
+      return `${startTime} - ${endTime}`;
+    } 
+    else if (event.time && event.time.includes('-')) {
+      return formatTimeDisplay(event.time);
+    }
+    else if (event.time) {
+      return formatTimeDisplay(event.time);
+    }
+    return 'Time not set';
+  };
+
   const toggleAttendance = async (eventId, registrationId, attendance) => {
     try {
-      console.log("=== ATTENDANCE UPDATE DEBUG ===");
-      console.log("Registration ID:", registrationId);
-      console.log("Attendance:", attendance);
-      
-      // Use the correct endpoint and data format
       const res = await axios.put(`http://localhost:8000/api/registrations/${registrationId}/attendance`, {
         attendance: attendance
       });
 
-      console.log("✅ Backend response:", res.data);
-
-      // If marking as absent, add penalty to user
       if (attendance === 'absent') {
         const registration = selectedEvent.registrations.find(reg => reg.id === registrationId);
         if (registration && registration.user_id) {
-          console.log("Adding penalty for user:", registration.user_id);
           try {
             await axios.post(`http://localhost:8000/api/users/${registration.user_id}/penalty`);
-            console.log("✅ Penalty added successfully");
           } catch (penaltyError) {
-            console.error("❌ Error adding penalty:", penaltyError);
-            // Continue even if penalty fails - attendance was still updated
+            console.error("Error adding penalty:", penaltyError);
           }
         }
       }
 
-      // Update frontend state
       setSelectedEvent(prev => ({
         ...prev,
         registrations: prev.registrations.map(reg =>
@@ -207,7 +270,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         )
       }));
 
-      // Update events list
       setEvents(prev => prev.map(event =>
         event.id === eventId
           ? {
@@ -219,37 +281,26 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           : event
       ));
 
-      alert(`✅ User marked as ${attendance}${attendance === 'absent' ? ' and penalty added' : ''}!`);
+      alert(`User marked as ${attendance}${attendance === 'absent' ? ' and penalty added' : ''}!`);
     } catch (err) {
-      console.error("❌ Error updating attendance:", err);
-      console.error("❌ Error details:", {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        message: err.message
-      });
-      
-      // Show specific error message
+      console.error("Error updating attendance:", err);
       let errorMessage = "Failed to update attendance. ";
       if (err.response?.status === 404) {
         errorMessage += "Registration not found.";
       } else if (err.response?.status === 500) {
-        errorMessage += "Server error. Check your backend.";
+        errorMessage += "Server error.";
       } else if (err.response?.data?.message) {
         errorMessage += err.response.data.message;
       } else {
         errorMessage += err.message;
       }
-      
       alert(errorMessage);
     }
   };
 
   const handleViewRegistrations = async (event) => {
     try {
-      console.log("Loading registrations for event:", event.id);
       const res = await axios.get(`http://localhost:8000/api/events/${event.id}/registrations`);
-      console.log("Registrations loaded:", res.data);
       setSelectedEvent({
         ...event,
         registrations: res.data,
@@ -268,19 +319,16 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         }
       });
 
-      console.log("Logout response:", res.data);
       alert(res.data.message);
-
       localStorage.removeItem('token');
       onLogout();
       window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
+      alert("Failed to log out.");
     }
   };
 
-  // FIXED: Safe getUserDetails function
   const getUserDetails = (email) => {
     if (!users || !Array.isArray(users)) {
       return { barangay: 'N/A', purok: 'N/A' };
@@ -306,7 +354,10 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           ☰
         </button>
         <h3 className="title">EventHub</h3>
-        <Link to="/" onClick={handleLogout}>Logout</Link>
+        <button className="logout-btn" onClick={handleLogout}>
+          <span className="logout-icon">🚪</span>
+          <span className="logout-text">Logout</span>
+        </button>
       </div>
 
       <div className={`sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -320,7 +371,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         </ul>
       </div>
 
-      {/* Mobile overlay */}
       {mobileMenuOpen && (
         <div 
           className="mobile-overlay"
@@ -332,36 +382,82 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         <h1 className="admin-title">Admin Dashboard</h1>
 
         <div className="admin-section">
-          <div className="admin-section">
-            <button className="admin-btn-primary" onClick={openCreateModal}>+ Create Event</button>
-          </div>
+          <button className="admin-btn-primary" onClick={openCreateModal}>+ Create Event</button>
+          
           <h2>All Events</h2>
+          
           {eventsWithStatus.length === 0 ? (
-            <p>No events yet.</p>
+            <div className="empty-state">
+              <p>No events yet. Create your first event!</p>
+            </div>
           ) : (
-            eventsWithStatus.map((event) => (
-              <div key={event.id} className="admin-section">
-                <h3>{event.title} <span className={`admin-status-badge ${event.status}`}>{event.status}</span></h3>
-                <p>{event.description}</p>
-                <p>
-                  Date & Time:{" "}
-                  {new Date(event.date).toLocaleDateString('en-US', {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}{" "}
-                  {formatTimeDisplay(event.time)}
-                </p>
-                <p>Location: {event.location}</p>
-                <p>Category: {event.category}</p>
-
-                <div className="admin-actions">
-                  <button onClick={() => handleEdit(event)}>✏️ Edit</button>
-                  <button onClick={() => handleDelete(event.id)}>🗑️ Delete</button>
-                  <button onClick={() => handleViewRegistrations(event)}>👥 View Registrations</button>
+            <div className="events-card-container">
+              {eventsWithStatus.map((event) => (
+                <div key={event.id} className="event-card">
+                  <div className="event-card-header">
+                    <h3 className="event-card-title">{event.title}</h3>
+                    <span className={`table-status event-card-status ${event.status}`}>
+                      {event.status === "upcoming" ? "Upcoming" : 
+                      event.status === "present" ? "Happening Now" : 
+                      "Past Event"}
+                    </span>
+                  </div>
+                  
+                  <div className="event-card-details">
+                    <div className="event-card-detail">
+                      <span className="event-card-label">Date:</span>
+                      <span className="event-card-value">
+                        {new Date(event.date).toLocaleDateString('en-US', {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <div className="event-card-detail">
+                      <span className="event-card-label">Time:</span>
+                      <span className="event-card-value">{getTimeRange(event)}</span>
+                    </div>
+                    <div className="event-card-detail">
+                      <span className="event-card-label">Location:</span>
+                      <span className="event-card-value">{event.location}</span>
+                    </div>
+                    <div className="event-card-detail">
+                      <span className="event-card-label">Category:</span>
+                      <span className="event-card-value">{event.category}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="event-description-container">
+                    <div className="event-description-label">Description:</div>
+                    <div className="event-description-scroll">
+                      <p className="event-description-text">{event.description}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="event-card-actions">
+                    <button 
+                      className="table-btn edit"
+                      onClick={() => handleEdit(event)}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      className="table-btn registrations"
+                      onClick={() => handleViewRegistrations(event)}
+                    >
+                      Attendance
+                    </button>
+                    <button 
+                      className="table-btn delete"
+                      onClick={() => handleDelete(event.id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
 
@@ -379,7 +475,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                 </button>
               </div>
               <div className="admin-form">
-                {/* Loading Overlay */}
                 {loading && (
                   <div className="modal-loading-overlay">
                     <div className="modal-loading-spinner"></div>
@@ -433,11 +528,22 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                     />
                   </div>
                   <div className="admin-form-group">
-                    <label>Time *</label>
+                    <label>Start Time *</label>
                     <input
                       type="time"
-                      name="time"
-                      value={formData.time}
+                      name="startTime"
+                      value={formData.startTime}
+                      onChange={handleInputChange}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="admin-form-group">
+                    <label>End Time *</label>
+                    <input
+                      type="time"
+                      name="endTime"
+                      value={formData.endTime}
                       onChange={handleInputChange}
                       required
                       disabled={loading}

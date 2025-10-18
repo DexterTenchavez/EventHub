@@ -3,17 +3,25 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import Signup from "./authentication/SignUp";
 import React from "react";
 import Login from "./authentication/Login";
+
+
 import Admindashboard from "./admin/Admindashboard";
 import Userspenalties from "./admin/Userspenalties";
+
+
 import Userdashboard from "./user/Userdashboard";
-import Pastevents from "./user/Pastevents";
+import EventsParticipate from "./user/EventsParticipate";
 import Upcomingevents from "./user/Upcomingevents";
 import Profile from "./user/Profile";
 
+
+
 export default function App() {
+
   const [events, setEvents] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -31,6 +39,8 @@ export default function App() {
     setLoading(false);
   }, []);
 
+
+
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("token");
@@ -40,6 +50,7 @@ export default function App() {
   if (loading) {
     return <div className="loading">Loading application...</div>;
   }
+
 
   return (
     <Router>
@@ -86,6 +97,8 @@ export default function App() {
           } 
         />
 
+
+
         {/* User Routes */}
         <Route
           path="/user-dashboard"
@@ -107,35 +120,44 @@ export default function App() {
           }
         />
 
-        <Route 
-          path="/past-events" 
-          element={
-            currentUser ? (
-              currentUser.role === "user" ? (
-                <Pastevents currentUser={currentUser} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } 
+       <Route 
+  path="/past-events" 
+  element={
+    currentUser ? (
+      currentUser.role === "user" ? (
+        <EventsParticipate 
+          events={events} 
+          currentUser={currentUser} 
+          onLogout={handleLogout} 
         />
+      ) : (
+        <Navigate to="/" replace />
+      )
+    ) : (
+      <Navigate to="/" replace />
+    )
+  } 
+/>
 
-        <Route 
-          path="/upcoming-events" 
-          element={
-            currentUser ? (
-              currentUser.role === "user" ? (
-                <Upcomingevents currentUser={currentUser} onLogout={handleLogout} />
-              ) : (
-                <Navigate to="/" replace />
-              )
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } 
-        />
+          <Route 
+              path="/upcoming-events" 
+              element={
+                currentUser ? (
+                  currentUser.role === "user" ? (
+                    <Upcomingevents 
+                      events={events} 
+                      setEvents={setEvents}  // ADD THIS LINE
+                      currentUser={currentUser} 
+                      onLogout={handleLogout} 
+                    />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              } 
+            />
 
         <Route 
           path="/profile" 
@@ -152,19 +174,8 @@ export default function App() {
           } 
         />
 
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-        // In App.js, temporarily add this route for testing:
-<Route 
-  path="/test-penalties" 
-  element={
-    <div>
-      <h1>Test Page - Users Penalties</h1>
-      <p>If you can see this, routing is working.</p>
-      <button onClick={() => window.history.back()}>Go Back</button>
-    </div>
-  } 
-/>
+       
+
       </Routes>
     </Router>
   );

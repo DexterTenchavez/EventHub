@@ -6,16 +6,13 @@ use Illuminate\Http\Request;
 use App\Models\Event;
 use Carbon\Carbon;
 use App\Models\Registration;
-
 use App\Mail\NewEventNotification;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Log; // Fixed import
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 
-
 class EventController extends Controller
 {
-
     public function index()
     {
         $events = Event::with('registrations')->get();
@@ -24,21 +21,26 @@ class EventController extends Controller
 
     public function store(Request $request)
     {
+        Log::info('Store method called', ['request_data' => $request->all()]); // Fixed: removed backslash
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'date' => 'required|date_format:Y-m-d',
-            'time' => 'required|date_format:H:i',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i',
             'location' => 'required|string|max:255',
             'category' => 'nullable|string|max:255',
-        ],
-        [
-            'date.after_or_equal' => 'You cannot create an event in the past.'
         ]);
+
+        // Add the time field by combining start and end times
+        $validated['time'] = $validated['start_time'] . ' - ' . $validated['end_time'];
+
+        Log::info('Validation passed', ['validated_data' => $validated]); // Fixed: removed backslash
 
         try {
             // Check if the event datetime is in the past
-            $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['time']);
+            $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['start_time']);
             
             if ($eventDateTime->isPast()) {
                 return response()->json([
@@ -48,7 +50,8 @@ class EventController extends Controller
 
             $event = Event::create($validated);
 
-            // Notify all users via email
+            // TEMPORARILY DISABLE EMAIL FOR TESTING
+            /*
             $users = User::all();
             foreach ($users as $user) {
                 try {
@@ -57,16 +60,19 @@ class EventController extends Controller
                     Log::error("Failed to send email to {$user->email}: " . $e->getMessage());
                 }
             }
+            */
 
             return response()->json([
-                'message' => 'Event created successfully and users notified!',
+                'message' => 'Event created successfully!',
                 'event' => $event
             ], 201);
 
         } catch (\Exception $e) {
-            Log::error("Failed to create event: " . $e->getMessage());
+            Log::error("Failed to create event: " . $e->getMessage()); // Fixed: removed backslash
+            Log::error("Stack trace: " . $e->getTraceAsString()); // Fixed: removed backslash
+            
             return response()->json([
-                'message' => 'Failed to create event. Check server logs for details.'
+                'message' => 'Failed to create event: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -79,7 +85,8 @@ class EventController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'date' => 'required|date_format:Y-m-d',
-            'time' => 'required|date_format:H:i',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i',
             'location' => 'required|string|max:255',
             'category' => 'nullable|string|max:255',
         ], [
@@ -88,7 +95,7 @@ class EventController extends Controller
 
         try {
             // Check if the event datetime is in the past
-            $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['time']);
+            $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['start_time']);
             
             if ($eventDateTime->isPast()) {
                 return response()->json([
@@ -117,8 +124,8 @@ class EventController extends Controller
         $event = Event::findOrFail($id);
 
         // Check if event is in the past using both date and time
-        $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $event->date . ' ' . $event->time);
-        
+        $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $event->date . ' ' . $event->start_time);
+    
         if (now()->greaterThan($eventDateTime)) {
             return response()->json([
                 'message' => 'This event has already ended. Registration is closed.'

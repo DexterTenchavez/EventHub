@@ -7,7 +7,6 @@ export default function Userspenalties({ currentUser, onLogout }) {
   const [users, setUsers] = useState([]);
   const [events, setEvents] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [userRegistrations, setUserRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -226,9 +225,10 @@ export default function Userspenalties({ currentUser, onLogout }) {
           ☰
         </button>
         <h3 className="title">EventHub Admin</h3>
-        <Link to="/" onClick={handleLogout}>
-          Logout
-        </Link>
+         <button className="logout-btn" onClick={handleLogout}>
+    <span className="logout-icon">🚪</span>
+    <span className="logout-text">Logout</span>
+  </button>
       </div>
 
       <div className={`penalty-sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>

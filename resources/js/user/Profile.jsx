@@ -225,9 +225,7 @@ export default function Profile({ currentUser, onLogout }) {
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
+ 
 
   if (loading) {
     return (
@@ -239,21 +237,19 @@ export default function Profile({ currentUser, onLogout }) {
 
   return (
     <div className="profile-page">
-      <div className="profile-topbar">
-        <button className="mobile-menu-btn" onClick={toggleSidebar}>
-          ☰
-        </button>
-        <h3 className="title">EventHub</h3>
-        <Link to="/" onClick={handleLogout}>Logout</Link>
-      </div>
 
-      <div className={`profile-sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
-        <ul>
-          <li><Link to="/user-dashboard" onClick={() => setSidebarOpen(false)}>Dashboard</Link></li>
-          <li><Link to="/upcoming-events" onClick={() => setSidebarOpen(false)}>Upcoming Events</Link></li>
-          <li><Link to="/past-events" onClick={() => setSidebarOpen(false)}>Past Events</Link></li>
-          <li className="profile-currentpage"><Link to="/profile" onClick={() => setSidebarOpen(false)}>Profile</Link></li>
-        </ul>
+       <div className="back-container">
+        <Link to="/user-dashboard" className="back-btn">
+          <span className="back-icon">←</span>
+          Back to Dashboard
+        </Link>
+      </div>
+      
+        <div className="logout-container">
+        <button className="logout-btn" onClick={handleLogout}>
+          <span className="logout-icon">🚪</span>
+          Logout
+        </button>
       </div>
 
       <div className="profile-content">
@@ -453,6 +449,8 @@ export default function Profile({ currentUser, onLogout }) {
   </div>
 </div>
       </div>
+
+      
     </div>
   );
 }

@@ -13,14 +13,15 @@ class Event extends Model
         'title',
         'description',
         'date',
-        'time', // Add time to fillable
+        'start_time', // Add this
+        'end_time',   // Add this
+        'time',       // Keep this for backward compatibility
         'location',
         'category',
     ];
 
     protected $casts = [
-        'date' => 'date', // Keep as date only
-        
+        'date' => 'date',
     ];
     
     public function registrations()
