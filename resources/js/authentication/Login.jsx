@@ -7,9 +7,13 @@ export default function Login({ setCurrentUser }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (loading) return;
+    
+    setLoading(true);
     try {
       const res = await axios.post("http://localhost:8000/api/login", { email, password });
 
@@ -23,6 +27,8 @@ export default function Login({ setCurrentUser }) {
     } catch (error) {
       console.error(error);
       alert(error.response?.data.message || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -38,6 +44,7 @@ export default function Login({ setCurrentUser }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={loading}
         />
         <input
           className="login-input"
@@ -46,8 +53,15 @@ export default function Login({ setCurrentUser }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          disabled={loading}
         />
-        <button className="login-btn" type="submit">Login</button>
+        <button 
+          className="login-btn" 
+          type="submit"
+          disabled={loading}
+        >
+          {loading ? "Logging in..." : "Login"}
+        </button>
       </form>
       <p className="login-text">
         Don't have an account? <Link className="login-link" to="/signup">Sign Up</Link> here
