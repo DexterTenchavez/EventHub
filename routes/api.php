@@ -16,7 +16,7 @@ Route::post('/events', [EventController::class, 'store']);
 Route::put('/events/{id}', [EventController::class, 'update']);
 Route::delete('/events/{id}', [EventController::class, 'destroy']);
 
-// Update registration attendance
+
 Route::put('/registrations/{id}', [RegistrationController::class, 'update']);
 Route::post('/events/{id}/register', [RegistrationController::class, 'register']);
 Route::post('/events/{id}/unregister', [RegistrationController::class, 'unregister']);
@@ -27,4 +27,8 @@ Route::put('/registrations/{id}/attendance', [RegistrationController::class, 'up
 Route::get('/users', [UserController::class, 'index']);
 Route::post('/users/{id}/penalty', [UserController::class, 'addPenalty']);
 Route::post('/users/{id}/penalty/decrease', [UserController::class, 'decreasePenalty']);
+
+
+Route::post('/events/send-notifications', [EventController::class, 'sendEventNotifications']);
+Route::post('/events/{id}/send-reminder', [EventController::class, 'sendEventReminder']);
 

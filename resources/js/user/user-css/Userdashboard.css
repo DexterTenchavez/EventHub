@@ -91,7 +91,7 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-/* --- Content --- */
+
 .user-content {
   margin-left: 240px;
   padding: 80px 30px;
@@ -99,11 +99,6 @@ body {
   min-height: calc(100vh - 160px);
 }
 
-.user-content h1 {
-  color: black;
-  margin-bottom: 10px;
-  font-size: 2rem;
-}
 
 .user-content h2 {
   color: black;
@@ -128,8 +123,8 @@ body {
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
-  height: 480px; /* Fixed height for all cards */
-  overflow: hidden; /* Prevent content from overflowing */
+  height: 480px; 
+  overflow: hidden; 
   position: relative;
 }
 
@@ -164,7 +159,7 @@ body {
   flex: 1; /* Take available space */
   display: flex;
   flex-direction: column;
-  min-height: 120px; /* Minimum height for description area */
+  min-height: 0px; /* Minimum height for description area */
   margin: 10px 0;
 }
 
@@ -191,7 +186,7 @@ body {
   color: black;
   margin: 0;
   word-wrap: break-word;
-  white-space: pre-line; /* Preserve line breaks */
+  white-space: pre-line; 
 }
 
 /* Custom scrollbar for description */
@@ -234,16 +229,19 @@ body {
 .status-badge.upcoming {
   background-color: #ff9800;
   color: white;
+   border: 1px solid #fed7aa;
 }
 
 .status-badge.present {
   background-color: #4CAF50;
   color: white;
+  border: 1px solid #bbf7d0;
 }
 
 .status-badge.past {
-  background-color: #f44336;
+   background: #64748b;
   color: white;
+  border: 1px solid #e2e8f0;
 }
 
 /* --- Buttons --- */
@@ -363,7 +361,7 @@ body {
   
   .event-card {
     min-height: auto;
-    height: 420px; /* Smaller height on mobile */
+    height: 500px; /* Smaller height on mobile */
     padding: 20px;
   }
   

@@ -138,6 +138,26 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     return 'Time not set';
   };
 
+  const parseTimeToDate = (timeString, baseDate) => {
+    if (!timeString) return null;
+    
+    const time = timeString.trim();
+    const [timePart, period] = time.split(' ');
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    let finalHours = hours;
+    
+    if (period === 'PM' && hours < 12) {
+      finalHours = hours + 12;
+    } else if (period === 'AM' && hours === 12) {
+      finalHours = 0;
+    }
+    
+    const date = new Date(baseDate);
+    date.setHours(finalHours, minutes || 0, 0, 0);
+    return date;
+  };
+
   const getEventStatus = (event) => {
     const now = new Date();
     const eventDate = new Date(event.date);
@@ -146,28 +166,28 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     let endTime = null;
     
     if (event.start_time && event.end_time) {
-      const [startHours, startMinutes] = event.start_time.split(':').map(Number);
-      const [endHours, endMinutes] = event.end_time.split(':').map(Number);
+      startTime = parseTimeToDate(formatTimeDisplay(event.start_time), eventDate);
+      endTime = parseTimeToDate(formatTimeDisplay(event.end_time), eventDate);
       
-      startTime = new Date(eventDate);
-      startTime.setHours(startHours, startMinutes, 0, 0);
-      
-      endTime = new Date(eventDate);
-      endTime.setHours(endHours, endMinutes, 0, 0);
+      if (startTime && endTime) {
+        if (endTime < startTime) {
+          endTime.setDate(endTime.getDate() + 1);
+        }
+      }
     } 
     else if (event.time && event.time.includes('-')) {
       const timeParts = event.time.split('-');
       const startPart = timeParts[0].trim();
       const endPart = timeParts[1].trim();
       
-      const [startHours, startMinutes] = startPart.split(':').map(Number);
-      const [endHours, endMinutes] = endPart.split(':').map(Number);
+      startTime = parseTimeToDate(formatTimeDisplay(startPart), eventDate);
+      endTime = parseTimeToDate(formatTimeDisplay(endPart), eventDate);
       
-      startTime = new Date(eventDate);
-      startTime.setHours(startHours, startMinutes, 0, 0);
-      
-      endTime = new Date(eventDate);
-      endTime.setHours(endHours, endMinutes, 0, 0);
+      if (startTime && endTime) {
+        if (endTime < startTime) {
+          endTime.setDate(endTime.getDate() + 1);
+        }
+      }
     }
     
     if (startTime && endTime) {
@@ -192,8 +212,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       return "past";
     }
   };
-
- 
 
   return (
     <div>
@@ -220,9 +238,8 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
             <Link to="/upcoming-events" onClick={handleNavClick}>Upcoming Events</Link>
           </li>
           <li>
-            <Link to="/past-events" onClick={handleNavClick}>Events History</Link>
+            <Link to="/past-events" onClick={handleNavClick}>My Events History</Link>
           </li>
-          
         </ul>
       </div>
 
@@ -234,7 +251,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       )}
 
       <div className="user-content">
-        <h1>Welcome, {currentUser.name}!</h1>
         <h2>Available Events</h2>
 
         {events.length === 0 ? (
@@ -259,7 +275,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                   })} at {getTimeRange(event)}</p>
                   <p><strong>Location:</strong> {event.location}</p>
                   
-                  {/* FIXED: Scrollable description area */}
                   <div className="event-description-container">
                     <div className="event-description-label">Description:</div>
                     <div className="event-description-scroll">
@@ -271,7 +286,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                     <p><strong>Status:</strong> 
                       <span className={`status-badge ${status}`}>
                         {status === "upcoming" ? "Upcoming" : 
-                         status === "present" ? "Happening Now" : 
+                         status === "present" ? "Started" : 
                          "Past Event"}
                       </span>
                     </p>

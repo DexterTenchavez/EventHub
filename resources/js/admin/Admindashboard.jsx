@@ -152,6 +152,46 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     }
   };
 
+  const formatTimeDisplay = (timeValue) => {
+    if (!timeValue) return 'Time not set';
+    
+    if (timeValue.includes('-')) {
+      const timeParts = timeValue.split('-');
+      const startTime = formatTimeDisplay(timeParts[0].trim());
+      const endTime = formatTimeDisplay(timeParts[1].trim());
+      return `${startTime} - ${endTime}`;
+    }
+    
+    const timeParts = timeValue.split(':');
+    const hours = parseInt(timeParts[0]);
+    const minutes = timeParts[1] || '00';
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const parseTimeToDate = (timeString, baseDate) => {
+    if (!timeString) return null;
+    
+    const time = timeString.trim();
+    const [timePart, period] = time.split(' ');
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    let finalHours = hours;
+    
+    if (period === 'PM' && hours < 12) {
+      finalHours = hours + 12;
+    } else if (period === 'AM' && hours === 12) {
+      finalHours = 0;
+    }
+    
+    const date = new Date(baseDate);
+    date.setHours(finalHours, minutes || 0, 0, 0);
+    return date;
+  };
+
   const getEventStatus = (event) => {
     const now = new Date();
     const eventDate = new Date(event.date);
@@ -160,28 +200,28 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     let endTime = null;
     
     if (event.start_time && event.end_time) {
-      const [startHours, startMinutes] = event.start_time.split(':').map(Number);
-      const [endHours, endMinutes] = event.end_time.split(':').map(Number);
+      startTime = parseTimeToDate(formatTimeDisplay(event.start_time), eventDate);
+      endTime = parseTimeToDate(formatTimeDisplay(event.end_time), eventDate);
       
-      startTime = new Date(eventDate);
-      startTime.setHours(startHours, startMinutes, 0, 0);
-      
-      endTime = new Date(eventDate);
-      endTime.setHours(endHours, endMinutes, 0, 0);
+      if (startTime && endTime) {
+        if (endTime < startTime) {
+          endTime.setDate(endTime.getDate() + 1);
+        }
+      }
     } 
     else if (event.time && event.time.includes('-')) {
       const timeParts = event.time.split('-');
       const startPart = timeParts[0].trim();
       const endPart = timeParts[1].trim();
       
-      const [startHours, startMinutes] = startPart.split(':').map(Number);
-      const [endHours, endMinutes] = endPart.split(':').map(Number);
+      startTime = parseTimeToDate(formatTimeDisplay(startPart), eventDate);
+      endTime = parseTimeToDate(formatTimeDisplay(endPart), eventDate);
       
-      startTime = new Date(eventDate);
-      startTime.setHours(startHours, startMinutes, 0, 0);
-      
-      endTime = new Date(eventDate);
-      endTime.setHours(endHours, endMinutes, 0, 0);
+      if (startTime && endTime) {
+        if (endTime < startTime) {
+          endTime.setDate(endTime.getDate() + 1);
+        }
+      }
     }
     
     if (startTime && endTime) {
@@ -210,26 +250,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   const eventsWithStatus = (events || []).map((event) => {
     return { ...event, status: getEventStatus(event) };
   });
-
-  const formatTimeDisplay = (timeValue) => {
-    if (!timeValue) return 'Time not set';
-    
-    if (timeValue.includes('-')) {
-      const timeParts = timeValue.split('-');
-      const startTime = formatTimeDisplay(timeParts[0].trim());
-      const endTime = formatTimeDisplay(timeParts[1].trim());
-      return `${startTime} - ${endTime}`;
-    }
-    
-    const timeParts = timeValue.split(':');
-    const hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1] || '00';
-    
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHour = hours % 12 || 12;
-    
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
 
   const getTimeRange = (event) => {
     if (event.start_time && event.end_time) {
@@ -398,7 +418,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                     <h3 className="event-card-title">{event.title}</h3>
                     <span className={`table-status event-card-status ${event.status}`}>
                       {event.status === "upcoming" ? "Upcoming" : 
-                      event.status === "present" ? "Happening Now" : 
+                      event.status === "present" ? "Started" : 
                       "Past Event"}
                     </span>
                   </div>
@@ -501,9 +521,34 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                       onChange={handleInputChange}
                       disabled={loading}
                     >
-                      <option value="Tech Conference">Tech Conference</option>
-                      <option value="Music Festival">Music Festival</option>
-                      <option value="Workshop">Workshop</option>
+                      <option value="">Select a category</option>
+                      
+                      <optgroup label="Professional">
+                        <option value="Tech Conference">Tech Conference</option>
+                        <option value="Business Summit">Business Summit</option>
+                        <option value="Workshop">Workshop</option>
+                        <option value="Networking Event">Networking Event</option>
+                      </optgroup>
+                      
+                      <optgroup label="Entertainment">
+                        <option value="Music Festival">Music Festival</option>
+                        <option value="Concert">Concert</option>
+                        <option value="Art Exhibition">Art Exhibition</option>
+                        <option value="Film Screening">Film Screening</option>
+                      </optgroup>
+                      
+                      <optgroup label="Sports & Wellness">
+                        <option value="Sports Tournament">Sports Tournament</option>
+                        <option value="Marathon">Marathon</option>
+                        <option value="Yoga Class">Yoga Class</option>
+                        <option value="Fitness Competition">Fitness Competition</option>
+                      </optgroup>
+                      
+                      <optgroup label="Community">
+                        <option value="Charity Event">Charity Event</option>
+                        <option value="Community Meeting">Community Meeting</option>
+                        <option value="Cultural Festival">Cultural Festival</option>
+                      </optgroup>
                     </select>
                   </div>
                   <div className="admin-form-group">
@@ -512,7 +557,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                       name="description" 
                       value={formData.description} 
                       onChange={handleInputChange} 
-                      rows="4"
+                      rows="2"
                       disabled={loading}
                     />
                   </div>
@@ -549,17 +594,50 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                       disabled={loading}
                     />
                   </div>
-                  <div className="admin-form-group">
-                    <label>Location *</label>
-                    <input 
-                      type="text" 
-                      name="location" 
-                      value={formData.location} 
-                      onChange={handleInputChange}
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="admin-form-actions">
+                <div className="admin-form-group">
+                <label>Location *</label>
+                <select 
+                  name="location" 
+                  value={formData.location} 
+                  onChange={handleInputChange}
+                  disabled={loading}
+                >
+                  <option value="">Select a location</option>
+                  <option value="Anibongan">Anibongan</option>
+                  <option value="Babag">Babag</option>
+                  <option value="Cagawasan">Cagawasan</option>
+                  <option value="Cagawitan">Cagawitan</option>
+                  <option value="Caluasan">Caluasan</option>
+                  <option value="Candelaria">Candelaria</option>
+                  <option value="Can-oling">Can-oling</option>
+                  <option value="Estaca">Estaca</option>
+                  <option value="La Esperanza">La Esperanza</option>
+                  <option value="Liberty">Liberty</option>
+                  <option value="Magcagong">Magcagong</option>
+                  <option value="Malibago">Malibago</option>
+                  <option value="Mampas">Mampas</option>
+                  <option value="Napo">Napo</option>
+                  <option value="Poblacion">Poblacion</option>
+                  <option value="San Isidro">San Isidro</option>
+                  <option value="San Jose">San Jose</option>
+                  <option value="San Miguel">San Miguel</option>
+                  <option value="San Roque">San Roque</option>
+                  <option value="San Vicente">San Vicente</option>
+                  <option value="Santo Rosario">Santo Rosario</option>
+                  <option value="Santa Cruz">Santa Cruz</option>
+                  <option value="Santa Fe">Santa Fe</option>
+                  <option value="Santa Lucia">Santa Lucia</option>
+                  <option value="Santa Rosa">Santa Rosa</option>
+                  <option value="Santo Niño">Santo Niño</option>
+                  <option value="Santo Tomas">Santo Tomas</option>
+                  <option value="Santo Niño de Panglao">Santo Niño de Panglao</option>
+                  <option value="Taytay">Taytay</option>
+                  <option value="Tigbao">Tigbao</option>
+                </select>
+                 </div>
+
+
+                     <div className="admin-form-actions">
                     <button 
                       className="admin-btn-cancel" 
                       onClick={() => setShowModal(false)}

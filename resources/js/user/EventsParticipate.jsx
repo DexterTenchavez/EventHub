@@ -145,7 +145,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
         <ul>
           <li><Link to="/user-dashboard" onClick={handleNavClick}>Dashboard</Link></li>
           <li><Link to="/upcoming-events" onClick={handleNavClick}>Upcoming Events</Link></li>
-          <li className="user-currentpage"><Link to="/past-events" onClick={handleNavClick}>Events History</Link></li>
+          <li className="user-currentpage"><Link to="/past-events" onClick={handleNavClick}>My Events History</Link></li>
           
         </ul>
       </div>

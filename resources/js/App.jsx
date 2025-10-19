@@ -146,7 +146,7 @@ export default function App() {
                   currentUser.role === "user" ? (
                     <Upcomingevents 
                       events={events} 
-                      setEvents={setEvents}  // ADD THIS LINE
+                      setEvents={setEvents}  
                       currentUser={currentUser} 
                       onLogout={handleLogout} 
                     />

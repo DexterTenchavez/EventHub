@@ -19,7 +19,7 @@ class AuthController extends Controller
         'dob' => 'nullable|date',
         'barangay' => 'nullable|string|max:255',
         'purok' => 'nullable|string|max:255',
-        'password' => 'required|string|min:8',
+        'password' => 'required|string|min:5',
     ]);
 
     $user = \App\Models\User::create([
