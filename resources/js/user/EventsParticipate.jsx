@@ -6,16 +6,22 @@ import { useEffect, useState } from "react";
 export default function EventsParticipate({ events = [], currentUser, onLogout }) {
   const [participationHistory, setParticipationHistory] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedCards, setExpandedCards] = useState({});
+
+  const toggleExpand = (eventId) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
 
   useEffect(() => {
     const fetchParticipationHistory = async () => {
       try {
-        // Get all events where the user is registered
         const userEvents = events.filter(event => 
           event.registrations?.some(reg => reg.email === currentUser.email)
         );
 
-        // Map events with user's registration details
         const history = userEvents.map(event => {
           const registration = event.registrations.find(reg => reg.email === currentUser.email);
           return {
@@ -26,12 +32,11 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
             eventLocation: event.location,
             eventDescription: event.description,
             registrationDate: registration.created_at || event.date,
-            attendance: registration.attendance || 'pending', // present, absent, pending
+            attendance: registration.attendance || 'pending',
             registeredAt: registration.registered_at || registration.created_at
           };
         });
 
-        // Sort by event date (newest first)
         history.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate));
         setParticipationHistory(history);
       } catch (error) {
@@ -43,39 +48,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
       fetchParticipationHistory();
     }
   }, [events, currentUser]);
-
-  const formatTimeDisplay = (timeValue) => {
-    if (!timeValue) return 'Time not set';
-    
-    if (timeValue.includes('-')) {
-      const timeParts = timeValue.split('-');
-      const startTime = formatTimeDisplay(timeParts[0].trim());
-      const endTime = formatTimeDisplay(timeParts[1].trim());
-      return `${startTime} - ${endTime}`;
-    }
-    
-    const timeParts = timeValue.split(':');
-    const hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1] || '00';
-    
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHour = hours % 12 || 12;
-    
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
-
-  const getTimeRange = (event) => {
-    if (event.start_time && event.end_time) {
-      const startTime = formatTimeDisplay(event.start_time);
-      const endTime = formatTimeDisplay(event.end_time);
-      return `${startTime} - ${endTime}`;
-    } else if (event.time && event.time.includes('-')) {
-      return formatTimeDisplay(event.time);
-    } else if (event.time) {
-      return formatTimeDisplay(event.time);
-    }
-    return 'Time not set';
-  };
 
   const getAttendanceBadge = (attendance) => {
     switch (attendance) {
@@ -103,26 +75,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     setMobileMenuOpen(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      const res = await axios.post('http://localhost:8000/api/logout', {}, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      console.log("Logout response:", res.data);
-      alert(res.data.message);
-
-      localStorage.removeItem('token');
-      onLogout();
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
-    }
-  };
-
   if (!currentUser) return <p>Loading...</p>;
 
   return (
@@ -146,7 +98,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           <li><Link to="/user-dashboard" onClick={handleNavClick}>Dashboard</Link></li>
           <li><Link to="/upcoming-events" onClick={handleNavClick}>Upcoming Events</Link></li>
           <li className="user-currentpage"><Link to="/past-events" onClick={handleNavClick}>My Events History</Link></li>
-          
         </ul>
       </div>
 
@@ -154,15 +105,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
         <div 
           className="mobile-overlay"
           onClick={() => setMobileMenuOpen(false)}
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            zIndex: 80
-          }}
         />
       )}
 
@@ -206,7 +148,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
             </div>
 
             <div className="history-list">
-              {participationHistory.map((item, index) => (
+              {participationHistory.map((item) => (
                 <div key={item.eventId} className="participation-card">
                   <div className="card-header">
                     <h3>{item.eventTitle}</h3>
@@ -221,7 +163,20 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                       day: 'numeric',
                     })}</p>
                     <p><strong>Location:</strong> {item.eventLocation}</p>
-                    <p><strong>Description:</strong> {item.eventDescription}</p>
+                    <p className="event-description">
+                      <strong>Description:</strong> 
+                      <span className={`description-text ${expandedCards[item.eventId] ? 'expanded' : 'collapsed'}`}>
+                        {item.eventDescription}
+                      </span>
+                      {item.eventDescription.length > 100 && (
+                        <button 
+                          className="read-more-btn"
+                          onClick={() => toggleExpand(item.eventId)}
+                        >
+                          {expandedCards[item.eventId] ? 'Show Less' : 'Read More'}
+                        </button>
+                      )}
+                    </p>
                     
                     <div className="participation-details">
                       <p><strong>Your Status:</strong> 
