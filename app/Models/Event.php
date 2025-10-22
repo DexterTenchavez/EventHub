@@ -13,19 +13,23 @@ class Event extends Model
         'title',
         'description',
         'date',
-        'start_time', // Add this
-        'end_time',   // Add this
-        'time',       // Keep this for backward compatibility
+        'start_time', 
+        'end_time',
         'location',
-        'category',
+        'category'
     ];
 
     protected $casts = [
         'date' => 'date',
     ];
-    
+
     public function registrations()
     {
         return $this->hasMany(Registration::class);
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
     }
 }

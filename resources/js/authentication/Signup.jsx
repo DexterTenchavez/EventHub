@@ -44,7 +44,7 @@ export default function Signup() {
     try {
       const res = await axios.post("http://localhost:8000/api/register", formData);
       alert("Registration successful! Please login.");
-      localStorage.setItem("currentUser", JSON.stringify(res.data.user));
+      // Don't store user data or token after registration - user needs to login
       navigate("/");
     } catch (error) {
       if (error.response) {

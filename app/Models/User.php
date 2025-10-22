@@ -18,20 +18,18 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-    'name',
-    'email',
-    'username',
-    'contactNo',
-    'sex',
-    'dob',
-    'barangay',
-    'purok',
-    'password',
-    'role',
-    'penalties',
-];
-
-
+        'name',
+        'email',
+        'username',
+        'contactNo',
+        'sex',
+        'dob',
+        'barangay',
+        'purok',
+        'password',
+        'role',
+        'penalties',
+    ];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -49,7 +47,7 @@ class User extends Authenticatable
      * @return array<string, string>
      */
 
-     public function toArray()
+    public function toArray()
     {
         $array = parent::toArray();
         // Ensure timestamps are always included
@@ -65,9 +63,14 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    public function registrations()
-{
-    return $this->hasMany(\App\Models\Registration::class, 'email', 'email');
-}
 
+    public function registrations()
+    {
+        return $this->hasMany(\App\Models\Registration::class, 'email', 'email');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

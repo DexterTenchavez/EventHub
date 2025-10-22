@@ -234,10 +234,10 @@ export default function Userspenalties({ currentUser, onLogout }) {
       <div className={`penalty-sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <ul>
           <li>
-            <Link to="/admin-dashboard" onClick={handleNavClick}>Dashboard</Link>
+            <Link to="/admin-dashboard" onClick={handleNavClick}>🏠 Home</Link>
           </li>
           <li className="penalty-currentpages">
-            <Link to="/users-penalties" onClick={handleNavClick}>Users & Penalties</Link>
+            <Link to="/users-penalties" onClick={handleNavClick}>👥⚠️ Users & Penalties</Link>
           </li>
         </ul>
       </div>

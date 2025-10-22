@@ -232,14 +232,19 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <ul>
           <li className="user-currentpage">
-            <Link to="/user-dashboard" onClick={handleNavClick}>Dashboard</Link>
+            <Link to="/user-dashboard" onClick={handleNavClick}>🏠 Home</Link>
           </li>
           <li>
-            <Link to="/upcoming-events" onClick={handleNavClick}>Upcoming Events</Link>
+            <Link to="/upcoming-events" onClick={handleNavClick}>📅 Upcoming Events</Link>
           </li>
           <li>
-            <Link to="/past-events" onClick={handleNavClick}>My Events History</Link>
+            <Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link>
           </li>
+           <li>
+      <Link to="/notifications" onClick={handleNavClick}>🔔 Notifications 
+     
+      </Link>
+    </li>
         </ul>
       </div>
 

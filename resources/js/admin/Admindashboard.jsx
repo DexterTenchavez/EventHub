@@ -98,6 +98,11 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         res = await axios.post("http://localhost:8000/api/events", payload);
         setEvents(prev => [...(prev || []), res.data.event]);
         alert("Event created successfully!");
+        
+        // SAVE EVENT TO LOCALSTORAGE FOR NOTIFICATIONS
+        const newEvents = JSON.parse(localStorage.getItem('newEvents') || '[]');
+        newEvents.push(res.data.event);
+        localStorage.setItem('newEvents', JSON.stringify(newEvents));
       }
       setShowModal(false);
     } catch (err) {
@@ -383,10 +388,10 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       <div className={`sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <ul>
           <li className="currentpages">
-            <Link to="/admin-dashboard" onClick={handleNavClick}>Dashboard</Link>
+            <Link to="/admin-dashboard" onClick={handleNavClick}>🏠 Home</Link>
           </li>
           <li>
-            <Link to="/users-penalties" onClick={handleNavClick}>Users & Penalties</Link>
+            <Link to="/users-penalties" onClick={handleNavClick}>👥⚠️ Users & Penalties</Link>
           </li>
         </ul>
       </div>

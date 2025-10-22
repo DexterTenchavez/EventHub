@@ -17,7 +17,10 @@ export default function Login({ setCurrentUser }) {
     try {
       const res = await axios.post("http://localhost:8000/api/login", { email, password });
 
+      // ✅ FIX: Save both user data AND token
       localStorage.setItem("currentUser", JSON.stringify(res.data.user));
+      localStorage.setItem("auth_token", res.data.token); // Add this line!
+      
       setCurrentUser(res.data.user); 
 
       alert(res.data.message);

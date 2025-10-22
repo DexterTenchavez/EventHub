@@ -5,43 +5,43 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-   public function register(Request $request)
-{
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users',
-        'username' => 'required|string|max:255|unique:users',
-        'contactNo' => 'nullable|string|max:20',
-        'sex' => 'nullable|string|max:10',
-        'dob' => 'nullable|date',
-        'barangay' => 'nullable|string|max:255',
-        'purok' => 'nullable|string|max:255',
-        'password' => 'required|string|min:5',
-    ]);
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'username' => 'required|string|max:255|unique:users',
+            'contactNo' => 'nullable|string|max:20',
+            'sex' => 'nullable|string|max:10',
+            'dob' => 'nullable|date',
+            'barangay' => 'nullable|string|max:255',
+            'purok' => 'nullable|string|max:255',
+            'password' => 'required|string|min:5',
+        ]);
 
-    $user = \App\Models\User::create([
-        'name' => $validated['name'],
-        'email' => $validated['email'],
-        'username' => $validated['username'],
-        'contactNo' => $validated['contactNo'] ?? null,
-        'sex' => $validated['sex'] ?? null,
-        'dob' => $validated['dob'] ?? null,
-        'barangay' => $validated['barangay'] ?? null,
-        'purok' => $validated['purok'] ?? null,
-        'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
-    ]);
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'username' => $validated['username'],
+            'contactNo' => $validated['contactNo'] ?? null,
+            'sex' => $validated['sex'] ?? null,
+            'dob' => $validated['dob'] ?? null,
+            'barangay' => $validated['barangay'] ?? null,
+            'purok' => $validated['purok'] ?? null,
+            'password' => Hash::make($validated['password']),
+        ]);
 
-    return response()->json([
-        'message' => 'Registration successful!',
-        'user' => $user
-    ], 201);
-}
+        return response()->json([
+            'message' => 'Registration successful!',
+            'user' => $user
+        ], 201);
+    }
 
-
- public function login(Request $request)
+    public function login(Request $request)
 {
     $validated = $request->validate([
         'email' => 'required|string|email',
@@ -54,6 +54,9 @@ class AuthController extends Controller
         return response()->json(['message' => 'Invalid email or password'], 401);
     }
 
+    // Use session-based login instead of tokens
+    Auth::login($user);
+
     $dashboard = $user->role === 'admin' ? '/admin-dashboard' : '/user-dashboard';
 
     return response()->json([
@@ -63,16 +66,14 @@ class AuthController extends Controller
     ]);
 }
 
-public function logout(Request $request)
-{
-    $user = $request->user();
 
-    if ($user && $user->tokens()) {
-        $user->tokens()->delete(); // revoke all tokens for this user
-    }
+    public function logout(Request $request)
+{
+    Auth::logout();
+    
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
 
     return response()->json(['message' => 'Logged out successfully']);
 }
-
-
 }

@@ -174,10 +174,14 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
 
       <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <ul>
-          <li><Link to="/user-dashboard" onClick={handleNavClick}>Dashboard</Link></li>
-          <li className="user-currentpage"><Link to="/upcoming-events" onClick={handleNavClick}>Upcoming Events</Link></li>
-          <li><Link to="/past-events" onClick={handleNavClick}>My Events History</Link></li>
-         
+          <li><Link to="/user-dashboard" onClick={handleNavClick}>🏠 Home</Link></li>
+          <li className="user-currentpage"><Link to="/upcoming-events" onClick={handleNavClick}>📅 Upcoming Events</Link></li>
+          <li><Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link></li>
+          <li>
+      <Link to="/notifications" onClick={handleNavClick}>🔔 Notifications 
+    
+      </Link>
+    </li>
         </ul>
       </div>
 
