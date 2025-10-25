@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -16,6 +17,35 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       }
     };
     fetchEvents();
+  }, []);
+
+  useEffect(() => {
+    const loadNotificationCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:8000/api/notifications', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const notifications = await response.json();
+          const unreadCount = notifications.filter(notif => !notif.is_read).length;
+          setNotificationCount(unreadCount);
+        }
+      } catch (error) {
+        console.error('Error loading notification count:', error);
+      }
+    };
+
+    loadNotificationCount();
+    
+    const interval = setInterval(loadNotificationCount, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleNavClick = () => {
@@ -31,15 +61,28 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
 
     try {
+      const token = localStorage.getItem('token');
       let res;
 
       if (isRegistered) {
-        res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { email: currentUser.email });
+        res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
+          email: currentUser.email 
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         alert("You have canceled your registration.");
       } else {
         res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
           name: currentUser.name,
           email: currentUser.email,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         });
       }
 
@@ -223,10 +266,18 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           ☰
         </button>
         <h3 className="title">EventHub</h3>
-         <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-          <span className="profile-icon">👤</span>
-          Profile
-        </Link>
+        <div className="topbar-right">
+          <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
+            <span className="notification-icon">🔔</span>
+            {notificationCount > 0 && (
+              <span className="notification-badge">{notificationCount}</span>
+            )}
+          </Link>
+          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+            <span className="profile-icon">👤</span>
+            Profile
+          </Link>
+        </div>
       </div>
 
       <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -240,11 +291,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           <li>
             <Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link>
           </li>
-           <li>
-      <Link to="/notifications" onClick={handleNavClick}>🔔 Notifications 
-     
-      </Link>
-    </li>
         </ul>
       </div>
 

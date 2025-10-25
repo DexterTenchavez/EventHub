@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export default function Upcomingevents({ events = [], setEvents, currentUser, onLogout }) {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const getEventStatus = (event) => {
     const now = new Date();
@@ -66,6 +67,37 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
     const filteredEvents = events.filter(event => getEventStatus(event) === "upcoming");
     setUpcomingEvents(filteredEvents);
   }, [events]);
+
+  // Load notification count from API
+  useEffect(() => {
+    const loadNotificationCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:8000/api/notifications', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const notifications = await response.json();
+          const unreadCount = notifications.filter(notif => !notif.is_read).length;
+          setNotificationCount(unreadCount);
+        }
+      } catch (error) {
+        console.error('Error loading notification count:', error);
+      }
+    };
+
+    loadNotificationCount();
+    
+    // Refresh notification count every 30 seconds
+    const interval = setInterval(loadNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const formatTimeDisplay = (timeValue) => {
     if (!timeValue) return 'Time not set';
@@ -166,10 +198,18 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
           ☰
         </button>
         <h3 className="title">EventHub</h3>
-        <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-          <span className="profile-icon">👤</span>
-          Profile
-        </Link>
+        <div className="topbar-right">
+          <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
+            <span className="notification-icon">🔔</span>
+            {notificationCount > 0 && (
+              <span className="notification-badge">{notificationCount}</span>
+            )}
+          </Link>
+          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+            <span className="profile-icon">👤</span>
+            Profile
+          </Link>
+        </div>
       </div>
 
       <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -177,11 +217,7 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
           <li><Link to="/user-dashboard" onClick={handleNavClick}>🏠 Home</Link></li>
           <li className="user-currentpage"><Link to="/upcoming-events" onClick={handleNavClick}>📅 Upcoming Events</Link></li>
           <li><Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link></li>
-          <li>
-      <Link to="/notifications" onClick={handleNavClick}>🔔 Notifications 
-    
-      </Link>
-    </li>
+         
         </ul>
       </div>
 
@@ -216,7 +252,6 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
                   })} at {getTimeRange(event)}</p>
                   <p><strong>Location:</strong> {event.location}</p>
                   
-                  {/* FIXED: Scrollable description area */}
                   <div className="event-description-container">
                     <div className="event-description-label">Description:</div>
                     <div className="event-description-scroll">

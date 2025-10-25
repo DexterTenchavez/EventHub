@@ -20,71 +20,68 @@ class EventController extends Controller
         return response()->json($events);
     }
 
-    public function store(Request $request)
-    {
-        Log::info('Store method called', ['request_data' => $request->all()]); 
+   public function store(Request $request)
+{
+    Log::info('Store method called', ['request_data' => $request->all()]); 
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'date' => 'required|date_format:Y-m-d',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i',
-            'location' => 'required|string|max:255',
-            'category' => 'nullable|string|max:255',
-        ]);
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'required|string',
+        'date' => 'required|date_format:Y-m-d',
+        'start_time' => 'required|date_format:H:i',
+        'end_time' => 'required|date_format:H:i',
+        'location' => 'required|string|max:255',
+        'category' => 'nullable|string|max:255',
+    ]);
 
-        Log::info('Validation passed', ['validated_data' => $validated]); 
+    Log::info('Validation passed', ['validated_data' => $validated]); 
 
-        try {
-           
-            $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['start_time']);
-            
-            if ($eventDateTime->isPast()) {
-                return response()->json([
-                    'message' => 'You cannot create an event in the past.'
-                ], 422);
-            }
+    try {
+        $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $validated['date'] . ' ' . $validated['start_time']);
+        
+        if ($eventDateTime->isPast()) {
+            return response()->json([
+                'message' => 'You cannot create an event in the past.'
+            ], 422);
+        }
 
-            $event = Event::create($validated);
+        $event = Event::create($validated);
 
+        // FIXED: Check if notification already exists for this event
+        $existingNotification = Notification::where('event_id', $event->id)
+            ->where('title', 'like', '%New Event Created%')
+            ->first();
+
+        if (!$existingNotification) {
             // CREATE NOTIFICATIONS FOR ALL USERS
             $users = User::where('role', 'user')->get();
             
             foreach ($users as $user) {
                 Notification::create([
                     'user_id' => $user->id,
-                    'title' => 'New Event Created! 🎉',
+                    'title' => 'New Event! 🎉',
                     'message' => 'A new event "'.$event->title.'" has been scheduled for '.Carbon::parse($event->date)->format('F j, Y').'. Check it out!',
                     'event_id' => $event->id,
                     'is_read' => false,
                     'type' => 'success'
                 ]);
             }
-
-            // Send emails (your existing code)
-            foreach ($users as $user) {
-                try {
-                    Mail::to($user->email)->send(new NewEventNotification($event));
-                } catch (\Exception $e) {
-                    Log::error("Failed to send email to {$user->email}: " . $e->getMessage());
-                }
-            }
-
-            return response()->json([
-                'message' => 'Event created successfully!',
-                'event' => $event
-            ], 201);
-
-        } catch (\Exception $e) {
-            Log::error("Failed to create event: " . $e->getMessage());
-            Log::error("Stack trace: " . $e->getTraceAsString()); 
-            
-            return response()->json([
-                'message' => 'Failed to create event: ' . $e->getMessage()
-            ], 500);
         }
+
+        return response()->json([
+            'message' => 'Event created successfully!',
+            'event' => $event
+        ], 201);
+
+    } catch (\Exception $e) {
+        Log::error("Failed to create event: " . $e->getMessage());
+        Log::error("Stack trace: " . $e->getTraceAsString()); 
+        
+        return response()->json([
+            'message' => 'Failed to create event: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function update(Request $request, $id)
     {
@@ -211,4 +208,154 @@ class EventController extends Controller
         }   
     }
 
+    public function sendEventNotifications(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'event_id' => 'required|exists:events,id',
+                'message' => 'required|string',
+            ]);
+
+            $event = Event::findOrFail($validated['event_id']);
+            $users = User::where('role', 'user')->get();
+
+            foreach ($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => "Event Update: {$event->title}",
+                    'message' => $validated['message'],
+                    'event_id' => $event->id,
+                    'is_read' => false,
+                    'type' => 'info'
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Event notifications sent successfully',
+                'users_notified' => $users->count()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Error sending event notifications: " . $e->getMessage());
+            return response()->json(['message' => 'Error sending notifications'], 500);
+        }
+    }
+
+    public function sendEventReminder($id)
+    {
+        try {
+            $event = Event::findOrFail($id);
+            $users = User::where('role', 'user')->get();
+
+            foreach ($users as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => "Event Reminder: {$event->title}",
+                    'message' => "Don't forget about {$event->title} happening on " . Carbon::parse($event->date)->format('F j, Y') . " at {$event->location}",
+                    'event_id' => $event->id,
+                    'is_read' => false,
+                    'type' => 'warning'
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Event reminder sent successfully',
+                'users_notified' => $users->count()
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Error sending event reminder: " . $e->getMessage());
+            return response()->json(['message' => 'Error sending reminder'], 500);
+        }
+    }
+
+    public function checkEventNotifications()
+{
+    try {
+        $now = Carbon::now();
+        $events = Event::where('date', '>=', $now->toDateString())->get();
+        
+        $notificationsSent = 0;
+
+        foreach ($events as $event) {
+            $eventDateTime = Carbon::createFromFormat('Y-m-d H:i', $event->date . ' ' . $event->start_time);
+            $minutesUntilEvent = $now->diffInMinutes($eventDateTime, false);
+            
+            // Get users registered for this event
+            $registeredUsers = Registration::where('event_id', $event->id)
+                ->with('user')
+                ->get()
+                ->pluck('user')
+                ->filter();
+
+            // Send notifications based on time to registered users only
+            if ($minutesUntilEvent > 0 && $minutesUntilEvent <= 30) {
+                $this->sendEventTimedReminder($event, $registeredUsers, $minutesUntilEvent . ' minutes');
+                $notificationsSent++;
+            } elseif ($minutesUntilEvent <= 0 && $minutesUntilEvent > -60) {
+                $this->sendEventStarted($event, $registeredUsers);
+                $notificationsSent++;
+            }
+        }
+
+        return response()->json([
+            'message' => 'Event notifications checked',
+            'notifications_sent' => $notificationsSent,
+            'events_checked' => $events->count()
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error("Error checking event notifications: " . $e->getMessage());
+        return response()->json(['message' => 'Error checking notifications'], 500);
+    }
+}
+
+
+   
+   private function sendEventTimedReminder($event, $users, $timeText)
+{
+    foreach ($users as $user) {
+        // Check if notification already exists to prevent duplicates
+        $existingNotification = Notification::where('user_id', $user->id)
+            ->where('event_id', $event->id)
+            ->where('title', 'like', '%Event Starting Soon%')
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->first();
+
+        if (!$existingNotification) {
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => "Event Starting Soon ⏰",
+                'message' => "{$event->title} will start in {$timeText}. Get ready!",
+                'event_id' => $event->id,
+                'is_read' => false,
+                'type' => 'warning'
+            ]);
+        }
+    }
+}
+
+    // Helper method to send event started notifications
+   private function sendEventStarted($event, $users)
+{
+    foreach ($users as $user) {
+        // Check if notification already exists to prevent duplicates
+        $existingNotification = Notification::where('user_id', $user->id)
+            ->where('event_id', $event->id)
+            ->where('title', 'like', '%Event Started%')
+            ->where('created_at', '>=', now()->subMinutes(5))
+            ->first();
+
+        if (!$existingNotification) {
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => "Event Started! 🎉",
+                'message' => "{$event->title} has officially started. Join now!",
+                'event_id' => $event->id,
+                'is_read' => false,
+                'type' => 'success'
+            ]);
+        }
+    }
+}
 }

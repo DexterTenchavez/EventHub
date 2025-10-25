@@ -124,31 +124,32 @@ export default function Userspenalties({ currentUser, onLogout }) {
     }
   };
 
-  // Logout
-  const handleLogout = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        "http://localhost:8000/api/logout",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+ const handleLogout = async () => {
+  try {
+    // Clear frontend storage first
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
+    
+    // Send logout request to backend
+    await fetch('http://localhost:8000/api/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
 
-      alert(response.data.message || "Logged out successfully");
-      localStorage.removeItem("token");
-      localStorage.removeItem("currentUser");
-      if (onLogout) onLogout();
-      navigate("/");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
-    }
-  };
+    // Call parent logout handler
+    onLogout();
+    
+    // Redirect to login page
+    window.location.href = "/";
+  } catch (error) {
+    console.error("Logout failed:", error);
+    // Even if backend fails, clear frontend and redirect
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
+    onLogout();
+    window.location.href = "/";
+  }
+};
 
   // Calculate user statistics
   const getUserStats = () => {

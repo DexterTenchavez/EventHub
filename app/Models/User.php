@@ -6,11 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens; // ← Add this line
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable; // ← Add HasApiTokens here
 
     /**
      * The attributes that are mass assignable.
@@ -46,6 +47,13 @@ class User extends Authenticatable
      *
      * @return array<string, string>
      */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
 
     public function toArray()
     {
@@ -54,14 +62,6 @@ class User extends Authenticatable
         $array['created_at'] = $this->created_at;
         $array['updated_at'] = $this->updated_at;
         return $array;
-    }
-    
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
     }
 
     public function registrations()

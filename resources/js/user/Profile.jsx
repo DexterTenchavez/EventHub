@@ -138,20 +138,45 @@ export default function Profile({ currentUser, onLogout }) {
     setProfilePicture(generateDefaultAvatar(currentUser.name));
   };
 
-  const handleLogout = async () => {
-    try {
-      await axios.post('http://localhost:8000/api/logout', {}, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+ const handleLogout = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Clear frontend storage first
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('Token');
+    localStorage.removeItem('AUTH_TOKEN');
 
-      localStorage.removeItem('token');
-      onLogout();
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
+    // Only call logout API if we have a token
+    if (token) {
+      await fetch('http://localhost:8000/api/logout', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
     }
-  };
+
+    // Call parent logout handler
+    onLogout();
+    
+    // Redirect to login page
+    window.location.href = "/";
+  } catch (error) {
+    console.error("Logout failed:", error);
+    // Even if backend fails, clear frontend and redirect
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('Token');
+    localStorage.removeItem('AUTH_TOKEN');
+    onLogout();
+    window.location.href = "/";
+  }
+};
 
   const getPenaltyStatus = () => {
     if (userStats.penalties >= 3) return { status: "Banned", color: "#ff5252", message: "You cannot register for events" };

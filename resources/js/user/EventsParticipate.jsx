@@ -7,6 +7,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   const [participationHistory, setParticipationHistory] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCards, setExpandedCards] = useState({});
+  const [notificationCount, setNotificationCount] = useState(0);
 
   const toggleExpand = (eventId) => {
     setExpandedCards(prev => ({
@@ -49,6 +50,37 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     }
   }, [events, currentUser]);
 
+  // Load notification count from API
+  useEffect(() => {
+    const loadNotificationCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:8000/api/notifications', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const notifications = await response.json();
+          const unreadCount = notifications.filter(notif => !notif.is_read).length;
+          setNotificationCount(unreadCount);
+        }
+      } catch (error) {
+        console.error('Error loading notification count:', error);
+      }
+    };
+
+    loadNotificationCount();
+    
+    // Refresh notification count every 30 seconds
+    const interval = setInterval(loadNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const getAttendanceBadge = (attendance) => {
     switch (attendance) {
       case 'present':
@@ -87,10 +119,18 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           ☰
         </button>
         <h3 className="title">EventHub</h3>
-         <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-          <span className="profile-icon">👤</span>
-          Profile
-        </Link>
+        <div className="topbar-right">
+          <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
+            <span className="notification-icon">🔔</span>
+            {notificationCount > 0 && (
+              <span className="notification-badge">{notificationCount}</span>
+            )}
+          </Link>
+          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+            <span className="profile-icon">👤</span>
+            Profile
+          </Link>
+        </div>
       </div>
 
       <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -98,9 +138,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           <li><Link to="/user-dashboard" onClick={handleNavClick}>🏠 Home</Link></li>
           <li><Link to="/upcoming-events" onClick={handleNavClick}>📅 Upcoming Events</Link></li>
           <li className="user-currentpage"><Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link></li>
-           <li>
-      <Link to="/notifications" onClick={handleNavClick}>🔔 Notifications </Link>
-    </li>
+          
         </ul>
       </div>
 

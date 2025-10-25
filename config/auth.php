@@ -40,6 +40,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // ADD THIS API GUARD CONFIGURATION
+        'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+            'hash' => false,
+        ],
     ],
 
     /*

@@ -7,7 +7,7 @@ body {
   min-height: 100vh;
 }
 
-/* --- Topbar --- */
+/* 
 .user-topbar {
   background: linear-gradient(90deg, #1a237e, #283593);
   height: 60px;
@@ -21,6 +21,132 @@ body {
   right: 0;
   z-index: 100;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+*/
+
+.user-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  background: #1a237e;
+  color: white;
+  height: 60px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.notification-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: white;
+  text-decoration: none;
+  padding: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.notification-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.notification-icon {
+  font-size: 20px;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #ff4757;
+  color: white;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  border: 2px solid #1a237e;
+}
+
+.profile-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
+}
+
+.profile-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-icon {
+  font-size: 16px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .topbar-right {
+    gap: 15px;
+  }
+  
+  .notification-link {
+    padding: 6px;
+  }
+  
+  .notification-icon {
+    font-size: 18px;
+  }
+  
+  .notification-badge {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+  
+  .profile-link {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .profile-icon {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-topbar {
+    padding: 0 15px;
+  }
+  
+  .topbar-right {
+    gap: 10px;
+  }
+  
+  .profile-link span:last-child {
+    display: none; /* Hide "Profile" text on very small screens */
+  }
+  
+  .profile-link {
+    padding: 8px;
+  }
 }
 
 .user-topbar .title {

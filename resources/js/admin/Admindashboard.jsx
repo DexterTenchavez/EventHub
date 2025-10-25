@@ -24,7 +24,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/events");
+        const token = localStorage.getItem('token');
+        const res = await axios.get("http://localhost:8000/api/events", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         setEvents(res.data);
       } catch (err) {
         console.error("Failed to fetch events:", err);
@@ -33,7 +39,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
 
     const fetchUsers = async () => {
       try {
-        const res = await axios.get("http://localhost:8000/api/users");
+        const token = localStorage.getItem('token');
+        const res = await axios.get("http://localhost:8000/api/users", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         setUsers(res.data);
       } catch (err) {
         console.error("Failed to fetch users:", err);
@@ -78,6 +90,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     setLoading(true);
 
     try {
+      const token = localStorage.getItem('token');
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -91,15 +104,24 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
 
       let res;
       if (isEditing) {
-        res = await axios.put(`http://localhost:8000/api/events/${editId}`, payload);
+        res = await axios.put(`http://localhost:8000/api/events/${editId}`, payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         setEvents(prev => prev.map(ev => ev.id === editId ? res.data.event : ev));
         alert("Event updated successfully!");
       } else {
-        res = await axios.post("http://localhost:8000/api/events", payload);
+        res = await axios.post("http://localhost:8000/api/events", payload, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         setEvents(prev => [...(prev || []), res.data.event]);
         alert("Event created successfully!");
         
-        // SAVE EVENT TO LOCALSTORAGE FOR NOTIFICATIONS
         const newEvents = JSON.parse(localStorage.getItem('newEvents') || '[]');
         newEvents.push(res.data.event);
         localStorage.setItem('newEvents', JSON.stringify(newEvents));
@@ -147,7 +169,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
       try {
-        await axios.delete(`http://localhost:8000/api/events/${id}`);
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:8000/api/events/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         setEvents((prev) => (prev || []).filter((ev) => ev.id !== id));
         alert("Event deleted successfully!");
       } catch (err) {
@@ -273,15 +301,26 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
 
   const toggleAttendance = async (eventId, registrationId, attendance) => {
     try {
+      const token = localStorage.getItem('token');
       const res = await axios.put(`http://localhost:8000/api/registrations/${registrationId}/attendance`, {
         attendance: attendance
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (attendance === 'absent') {
         const registration = selectedEvent.registrations.find(reg => reg.id === registrationId);
         if (registration && registration.user_id) {
           try {
-            await axios.post(`http://localhost:8000/api/users/${registration.user_id}/penalty`);
+            await axios.post(`http://localhost:8000/api/users/${registration.user_id}/penalty`, {}, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
           } catch (penaltyError) {
             console.error("Error adding penalty:", penaltyError);
           }
@@ -325,7 +364,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
 
   const handleViewRegistrations = async (event) => {
     try {
-      const res = await axios.get(`http://localhost:8000/api/events/${event.id}/registrations`);
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:8000/api/events/${event.id}/registrations`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       setSelectedEvent({
         ...event,
         registrations: res.data,
@@ -338,19 +383,35 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
 
   const handleLogout = async () => {
     try {
-      const res = await axios.post('http://localhost:8000/api/logout', {}, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      alert(res.data.message);
+      const token = localStorage.getItem('token');
+      
+      localStorage.removeItem('currentUser');
       localStorage.removeItem('token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('Token');
+      localStorage.removeItem('AUTH_TOKEN');
+
+      if (token) {
+        await fetch('http://localhost:8000/api/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          }
+        });
+      }
+
       onLogout();
       window.location.href = "/";
     } catch (error) {
       console.error("Logout failed:", error);
-      alert("Failed to log out.");
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('Token');
+      localStorage.removeItem('AUTH_TOKEN');
+      onLogout();
+      window.location.href = "/";
     }
   };
 
@@ -527,28 +588,24 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                       disabled={loading}
                     >
                       <option value="">Select a category</option>
-                      
                       <optgroup label="Professional">
                         <option value="Tech Conference">Tech Conference</option>
                         <option value="Business Summit">Business Summit</option>
                         <option value="Workshop">Workshop</option>
                         <option value="Networking Event">Networking Event</option>
                       </optgroup>
-                      
                       <optgroup label="Entertainment">
                         <option value="Music Festival">Music Festival</option>
                         <option value="Concert">Concert</option>
                         <option value="Art Exhibition">Art Exhibition</option>
                         <option value="Film Screening">Film Screening</option>
                       </optgroup>
-                      
                       <optgroup label="Sports & Wellness">
                         <option value="Sports Tournament">Sports Tournament</option>
                         <option value="Marathon">Marathon</option>
                         <option value="Yoga Class">Yoga Class</option>
                         <option value="Fitness Competition">Fitness Competition</option>
                       </optgroup>
-                      
                       <optgroup label="Community">
                         <option value="Charity Event">Charity Event</option>
                         <option value="Community Meeting">Community Meeting</option>
@@ -599,50 +656,48 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                       disabled={loading}
                     />
                   </div>
-                <div className="admin-form-group">
-                <label>Location *</label>
-                <select 
-                  name="location" 
-                  value={formData.location} 
-                  onChange={handleInputChange}
-                  disabled={loading}
-                >
-                  <option value="">Select a location</option>
-                  <option value="Anibongan">Anibongan</option>
-                  <option value="Babag">Babag</option>
-                  <option value="Cagawasan">Cagawasan</option>
-                  <option value="Cagawitan">Cagawitan</option>
-                  <option value="Caluasan">Caluasan</option>
-                  <option value="Candelaria">Candelaria</option>
-                  <option value="Can-oling">Can-oling</option>
-                  <option value="Estaca">Estaca</option>
-                  <option value="La Esperanza">La Esperanza</option>
-                  <option value="Liberty">Liberty</option>
-                  <option value="Magcagong">Magcagong</option>
-                  <option value="Malibago">Malibago</option>
-                  <option value="Mampas">Mampas</option>
-                  <option value="Napo">Napo</option>
-                  <option value="Poblacion">Poblacion</option>
-                  <option value="San Isidro">San Isidro</option>
-                  <option value="San Jose">San Jose</option>
-                  <option value="San Miguel">San Miguel</option>
-                  <option value="San Roque">San Roque</option>
-                  <option value="San Vicente">San Vicente</option>
-                  <option value="Santo Rosario">Santo Rosario</option>
-                  <option value="Santa Cruz">Santa Cruz</option>
-                  <option value="Santa Fe">Santa Fe</option>
-                  <option value="Santa Lucia">Santa Lucia</option>
-                  <option value="Santa Rosa">Santa Rosa</option>
-                  <option value="Santo Niño">Santo Niño</option>
-                  <option value="Santo Tomas">Santo Tomas</option>
-                  <option value="Santo Niño de Panglao">Santo Niño de Panglao</option>
-                  <option value="Taytay">Taytay</option>
-                  <option value="Tigbao">Tigbao</option>
-                </select>
-                 </div>
-
-
-                     <div className="admin-form-actions">
+                  <div className="admin-form-group">
+                    <label>Location *</label>
+                    <select 
+                      name="location" 
+                      value={formData.location} 
+                      onChange={handleInputChange}
+                      disabled={loading}
+                    >
+                      <option value="">Select a location</option>
+                      <option value="Anibongan">Anibongan</option>
+                      <option value="Babag">Babag</option>
+                      <option value="Cagawasan">Cagawasan</option>
+                      <option value="Cagawitan">Cagawitan</option>
+                      <option value="Caluasan">Caluasan</option>
+                      <option value="Candelaria">Candelaria</option>
+                      <option value="Can-oling">Can-oling</option>
+                      <option value="Estaca">Estaca</option>
+                      <option value="La Esperanza">La Esperanza</option>
+                      <option value="Liberty">Liberty</option>
+                      <option value="Magcagong">Magcagong</option>
+                      <option value="Malibago">Malibago</option>
+                      <option value="Mampas">Mampas</option>
+                      <option value="Napo">Napo</option>
+                      <option value="Poblacion">Poblacion</option>
+                      <option value="San Isidro">San Isidro</option>
+                      <option value="San Jose">San Jose</option>
+                      <option value="San Miguel">San Miguel</option>
+                      <option value="San Roque">San Roque</option>
+                      <option value="San Vicente">San Vicente</option>
+                      <option value="Santo Rosario">Santo Rosario</option>
+                      <option value="Santa Cruz">Santa Cruz</option>
+                      <option value="Santa Fe">Santa Fe</option>
+                      <option value="Santa Lucia">Santa Lucia</option>
+                      <option value="Santa Rosa">Santa Rosa</option>
+                      <option value="Santo Niño">Santo Niño</option>
+                      <option value="Santo Tomas">Santo Tomas</option>
+                      <option value="Santo Niño de Panglao">Santo Niño de Panglao</option>
+                      <option value="Taytay">Taytay</option>
+                      <option value="Tigbao">Tigbao</option>
+                    </select>
+                  </div>
+                  <div className="admin-form-actions">
                     <button 
                       className="admin-btn-cancel" 
                       onClick={() => setShowModal(false)}
