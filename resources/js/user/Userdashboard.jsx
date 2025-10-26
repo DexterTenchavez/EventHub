@@ -2,10 +2,39 @@ import "./user-css/Userdashboard.css";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import Swal from 'sweetalert2';
 
 export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [lastActionTime, setLastActionTime] = useState(0);
+  const [actionCount, setActionCount] = useState(0);
+
+  // Rate limiting: max 5 actions per minute
+  const canPerformAction = () => {
+    const now = Date.now();
+    const timeDiff = now - lastActionTime;
+    
+    if (timeDiff > 60000) { // Reset counter after 1 minute
+      setActionCount(0);
+      setLastActionTime(now);
+      return true;
+    }
+    
+    if (actionCount >= 5) {
+      Swal.fire({
+        title: 'Action Limit Reached',
+        text: 'Please wait a minute before performing more actions.',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return false;
+    }
+    
+    setActionCount(prev => prev + 1);
+    setLastActionTime(now);
+    return true;
+  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -54,153 +83,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
 
   if (!currentUser) return <p>Loading...</p>;
 
-  const handleRegisterToggle = async (eventId) => {
-    const event = events.find((e) => e.id === eventId);
-    if (!event) return;
-
-    const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
-
-    try {
-      const token = localStorage.getItem('token');
-      let res;
-
-      if (isRegistered) {
-        res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
-          email: currentUser.email 
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        alert("You have canceled your registration.");
-      } else {
-        res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
-          name: currentUser.name,
-          email: currentUser.email,
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-      }
-
-      if (res.data.event) {
-        setEvents(prevEvents =>
-          prevEvents.map(ev =>
-            ev.id === eventId ? res.data.event : ev
-          )
-        );
-      } else {
-        setEvents(prevEvents =>
-          prevEvents.map(ev =>
-            ev.id === eventId
-              ? {
-                  ...ev,
-                  registrations: (ev.registrations || []).filter(
-                    r => r.email !== currentUser.email
-                  ),
-                }
-              : ev
-          )
-        );
-      }
-
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || "Failed to update registration. Please try again.");
-    }
-  };
-
-  useEffect(() => {
-    if ("Notification" in window) {
-      if (Notification.permission !== "granted") {
-        Notification.requestPermission();
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const checkNewEvents = async () => {
-      try {
-        const res = await axios.get("http://localhost:8000/api/events");
-        const latestEvents = res.data;
-
-        latestEvents.forEach((event) => {
-          if (!events.some((e) => e.id === event.id)) {
-            if (Notification.permission === "granted") {
-              new Notification("New Event Created!", {
-                body: `${event.title} on ${new Date(event.date).toLocaleDateString()} at ${getTimeRange(event)}`,
-                icon: "/favicon.ico",
-              });
-            }
-          }
-        });
-
-        setEvents(latestEvents);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    const interval = setInterval(checkNewEvents, 10000);
-    return () => clearInterval(interval);
-  }, [events]);
-
-  const formatTimeDisplay = (timeValue) => {
-    if (!timeValue) return 'Time not set';
-    
-    if (timeValue.includes('-')) {
-      const timeParts = timeValue.split('-');
-      const startTime = formatTimeDisplay(timeParts[0].trim());
-      const endTime = formatTimeDisplay(timeParts[1].trim());
-      return `${startTime} - ${endTime}`;
-    }
-    
-    const timeParts = timeValue.split(':');
-    const hours = parseInt(timeParts[0]);
-    const minutes = timeParts[1] || '00';
-    
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    const displayHour = hours % 12 || 12;
-    
-    return `${displayHour}:${minutes} ${ampm}`;
-  };
-
-  const getTimeRange = (event) => {
-    if (event.start_time && event.end_time) {
-      const startTime = formatTimeDisplay(event.start_time);
-      const endTime = formatTimeDisplay(event.end_time);
-      return `${startTime} - ${endTime}`;
-    } else if (event.time && event.time.includes('-')) {
-      return formatTimeDisplay(event.time);
-    } else if (event.time) {
-      return formatTimeDisplay(event.time);
-    }
-    return 'Time not set';
-  };
-
-  const parseTimeToDate = (timeString, baseDate) => {
-    if (!timeString) return null;
-    
-    const time = timeString.trim();
-    const [timePart, period] = time.split(' ');
-    const [hours, minutes] = timePart.split(':').map(Number);
-    
-    let finalHours = hours;
-    
-    if (period === 'PM' && hours < 12) {
-      finalHours = hours + 12;
-    } else if (period === 'AM' && hours === 12) {
-      finalHours = 0;
-    }
-    
-    const date = new Date(baseDate);
-    date.setHours(finalHours, minutes || 0, 0, 0);
-    return date;
-  };
-
+  // Add the missing getEventStatus function
   const getEventStatus = (event) => {
     const now = new Date();
     const eventDate = new Date(event.date);
@@ -254,6 +137,216 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     } else {
       return "past";
     }
+  };
+
+  // Add the missing helper functions
+  const formatTimeDisplay = (timeValue) => {
+    if (!timeValue) return 'Time not set';
+    
+    if (timeValue.includes('-')) {
+      const timeParts = timeValue.split('-');
+      const startTime = formatTimeDisplay(timeParts[0].trim());
+      const endTime = formatTimeDisplay(timeParts[1].trim());
+      return `${startTime} - ${endTime}`;
+    }
+    
+    const timeParts = timeValue.split(':');
+    const hours = parseInt(timeParts[0]);
+    const minutes = timeParts[1] || '00';
+    
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours % 12 || 12;
+    
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  const parseTimeToDate = (timeString, baseDate) => {
+    if (!timeString) return null;
+    
+    const time = timeString.trim();
+    const [timePart, period] = time.split(' ');
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    let finalHours = hours;
+    
+    if (period === 'PM' && hours < 12) {
+      finalHours = hours + 12;
+    } else if (period === 'AM' && hours === 12) {
+      finalHours = 0;
+    }
+    
+    const date = new Date(baseDate);
+    date.setHours(finalHours, minutes || 0, 0, 0);
+    return date;
+  };
+
+  const getTimeRange = (event) => {
+    if (event.start_time && event.end_time) {
+      const startTime = formatTimeDisplay(event.start_time);
+      const endTime = formatTimeDisplay(event.end_time);
+      return `${startTime} - ${endTime}`;
+    } else if (event.time && event.time.includes('-')) {
+      return formatTimeDisplay(event.time);
+    } else if (event.time) {
+      return formatTimeDisplay(event.time);
+    }
+    return 'Time not set';
+  };
+
+  const showCancellationReasonModal = (eventId) => {
+    Swal.fire({
+      title: 'Cancel Registration',
+      html: `
+        <p>Please select your reason for cancellation:</p>
+        <select id="cancellation-reason" class="swal2-select">
+          <option value="">Select a reason</option>
+          <option value="health">Health Issues</option>
+          <option value="injury">Injury</option>
+          <option value="schedule_conflict">Schedule Conflict</option>
+          <option value="personal_reasons">Personal Reasons</option>
+          <option value="other">Other</option>
+        </select>
+        <textarea id="other-reason" class="swal2-textarea" placeholder="Please specify other reason..." style="display: none; margin-top: 10px; width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Confirm Cancellation',
+      cancelButtonText: 'Keep Registration',
+      preConfirm: () => {
+        const reason = document.getElementById('cancellation-reason').value;
+        const otherReason = document.getElementById('other-reason').value;
+        
+        if (!reason) {
+          Swal.showValidationMessage('Please select a cancellation reason');
+          return false;
+        }
+        
+        if (reason === 'other' && !otherReason.trim()) {
+          Swal.showValidationMessage('Please specify your reason');
+          return false;
+        }
+        
+        return {
+          reason: reason === 'other' ? otherReason : reason,
+          reasonType: reason
+        };
+      },
+      didOpen: () => {
+        const reasonSelect = document.getElementById('cancellation-reason');
+        const otherTextarea = document.getElementById('other-reason');
+        
+        reasonSelect.addEventListener('change', (e) => {
+          if (e.target.value === 'other') {
+            otherTextarea.style.display = 'block';
+          } else {
+            otherTextarea.style.display = 'none';
+          }
+        });
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleRegisterToggle(eventId, result.value.reason, result.value.reasonType);
+      }
+    });
+  };
+
+  const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
+    // Check rate limiting
+    if (!canPerformAction()) {
+      return;
+    }
+
+    const event = events.find((e) => e.id === eventId);
+    if (!event) return;
+
+    const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
+
+    try {
+      const token = localStorage.getItem('token');
+      let res;
+
+      if (isRegistered) {
+        // For cancellation, include reason
+        res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
+          email: currentUser.email,
+          cancellation_reason: reasonType || cancellationReason
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        Swal.fire({
+          title: 'Registration Cancelled',
+          html: `
+            <p>Your registration has been cancelled successfully.</p>
+            <p><strong>Reason:</strong> ${getReasonText(cancellationReason, reasonType)}</p>
+          `,
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7'
+        });
+      } else {
+        // For registration
+        res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
+          name: currentUser.name,
+          email: currentUser.email,
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        Swal.fire({
+          title: 'Registration Successful!',
+          text: 'You have successfully registered for this event!',
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7'
+        });
+      }
+
+      if (res.data.event) {
+        setEvents(prevEvents =>
+          prevEvents.map(ev =>
+            ev.id === eventId ? res.data.event : ev
+          )
+        );
+      } else {
+        setEvents(prevEvents =>
+          prevEvents.map(ev =>
+            ev.id === eventId
+              ? {
+                  ...ev,
+                  registrations: (ev.registrations || []).filter(
+                    r => r.email !== currentUser.email
+                  ),
+                }
+              : ev
+          )
+        );
+      }
+
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.message || "Failed to update registration. Please try again.",
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7'
+      });
+    }
+  };
+
+  const getReasonText = (reason, reasonType) => {
+    const reasonMap = {
+      'health': 'Health Issues',
+      'injury': 'Injury',
+      'schedule_conflict': 'Schedule Conflict',
+      'personal_reasons': 'Personal Reasons',
+      'other': reason
+    };
+    return reasonMap[reasonType] || reason;
   };
 
   return (
@@ -344,7 +437,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
 
                     {status === "upcoming" && (
                       <button
-                        onClick={() => handleRegisterToggle(event.id)}
+                        onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
                         className={isRegistered ? "cancel-btn" : "register-btn"}
                       >
                         {isRegistered ? "Cancel Registration" : "Register Now"}

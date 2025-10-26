@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
+import Swal from 'sweetalert2';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import "./authentication-css/Signup.css"
 
 export default function Signup() {
@@ -30,10 +32,15 @@ export default function Signup() {
   });
 
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   const handleRegister = async (e) => {
@@ -43,20 +50,54 @@ export default function Signup() {
     setLoading(true);
     try {
       const res = await axios.post("http://localhost:8000/api/register", formData);
-      alert("Registration successful! Please login.");
-      // Don't store user data or token after registration - user needs to login
-      navigate("/");
+      
+      // SweetAlert2 Success
+      Swal.fire({
+        title: '🎉 Registration Successful!',
+        text: 'Please login to continue.',
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7',
+        background: '#E3F2FD',
+        color: '#01579B',
+        confirmButtonText: 'Go to Login'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigate("/");
+        }
+      });
+      
     } catch (error) {
+      let errorMessage = "Registration failed. Please try again.";
+      
       if (error.response) {
         console.error("Server error:", error.response.data);
-        alert("Registration failed: " + JSON.stringify(error.response.data));
+        
+        // Handle different error types
+        if (error.response.data.errors) {
+          // Laravel validation errors
+          const errors = error.response.data.errors;
+          errorMessage = Object.values(errors)[0][0]; // Get first error message
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
       } else if (error.request) {
         console.error("No response:", error.request);
-        alert("No response from server. Check your API URL.");
+        errorMessage = "No response from server. Please check your connection.";
       } else {
         console.error("Error:", error.message);
-        alert("Error: " + error.message);
+        errorMessage = "Error: " + error.message;
       }
+      
+      // SweetAlert2 Error
+      Swal.fire({
+        title: 'Registration Failed',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7',
+        background: '#FFEBEE',
+        color: '#C62828',
+        confirmButtonText: 'Try Again'
+      });
     } finally {
       setLoading(false);
     }
@@ -142,16 +183,29 @@ export default function Signup() {
             required
             disabled={loading}
           />
-          <input
-            className="signup-input"
-            type="password"
-            placeholder="Password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
+          
+          {/* Password input with eye icon */}
+          <div className="password-input-container">
+            <input
+              className="signup-input password-input"
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="password-toggle-btn"
+              onClick={togglePasswordVisibility}
+              disabled={loading}
+            >
+              {showPassword ? <FaEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+          
           <button className="signup-btn" type="submit" disabled={loading}>
             {loading ? "Registering..." : "Register"}
           </button>

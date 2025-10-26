@@ -13,12 +13,35 @@ class Registration extends Model
         'event_id',
         'name', 
         'email',
-        'attendance', // Make sure this is here
-        'user_id'
+        'attendance',
+        'user_id',
+        'status', // Add this
+        'cancellation_reason', // Add this
+        'cancelled_at' // Add this
+    ];
+
+    protected $casts = [
+        'cancelled_at' => 'datetime', // Add this
     ];
 
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    // Helper methods
+    public function isCancelled()
+    {
+        return $this->status === 'cancelled';
+    }
+
+    public function isRegistered()
+    {
+        return $this->status === 'registered';
     }
 }

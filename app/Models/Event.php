@@ -23,9 +23,22 @@ class Event extends Model
         'date' => 'date',
     ];
 
+
     public function registrations()
     {
+        return $this->hasMany(Registration::class)->where('status', '!=', 'cancelled');
+    }
+
+ 
+    public function allRegistrations()
+    {
         return $this->hasMany(Registration::class);
+    }
+
+    
+    public function cancelledRegistrations()
+    {
+        return $this->hasMany(Registration::class)->where('status', 'cancelled');
     }
 
     public function notifications()

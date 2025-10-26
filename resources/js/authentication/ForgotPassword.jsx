@@ -45,7 +45,7 @@ export default function ForgotPassword() {
       {!emailSent ? (
         <form className="login-form" onSubmit={handleForgotPassword}>
           <p className="forgot-password-instructions">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we'll send you a code to reset your password.
           </p>
           
           <input
@@ -63,15 +63,27 @@ export default function ForgotPassword() {
             type="submit"
             disabled={loading}
           >
-            {loading ? "Sending..." : "Send Reset Link"}
+            {loading ? "Sending..." : "Send Reset Code"}
           </button>
         </form>
       ) : (
         <div className="email-sent-message">
           <div className="success-icon">✓</div>
           <h3>Check Your Email</h3>
-          <p>We've sent a password reset link to <strong>{email}</strong></p>
-          <p>Please check your inbox and follow the instructions.</p>
+          <p>We've sent a password reset code to <strong>{email}</strong></p>
+          <p>Please check your inbox and use the code to reset your password.</p>
+          
+          {/* ADDED: Direct link to reset password page */}
+          <div style={{ margin: '20px 0' }}>
+            <Link 
+              to={`/reset-password?email=${encodeURIComponent(email)}`} 
+              className="login-btn"
+              style={{ display: 'inline-block', textDecoration: 'none' }}
+            >
+              Go to Reset Password Page
+            </Link>
+          </div>
+          
           <Link to="/" className="login-link">
             Back to Login
           </Link>

@@ -165,25 +165,59 @@ class EventController extends Controller
 
    
     public function unregister($id, Request $request)
-    {
-        $event = Event::findOrFail($id);
+{
+    $event = Event::findOrFail($id);
 
-        $validated = $request->validate([
-            'email' => 'required|email',
-        ]);
+    $validated = $request->validate([
+        'email' => 'required|email',
+        'cancellation_reason' => 'required|string|in:health,injury,schedule_conflict,personal_reasons,other'
+    ]);
 
-        $registration = Registration::where('event_id', $event->id)
-            ->where('email', $validated['email'])
-            ->first();
+    
+    $user = User::where('email', $validated['email'])->first();
+    
+    if ($user) {
+        $recentCancellations = Registration::where('user_id', $user->id)
+            ->where('status', 'cancelled')
+            ->where('cancelled_at', '>=', now()->subHours(24))
+            ->count();
 
-        if (!$registration) {
-            return response()->json(['message' => 'Registration not found.'], 404);
+        if ($recentCancellations >= 5) {
+            return response()->json([
+                'message' => 'You have reached the daily cancellation limit (5 cancellations per 24 hours). Please try again tomorrow.'
+            ], 429);
         }
-
-        $registration->delete();
-
-        return response()->json(['message' => 'Unregistered successfully.']);
     }
+
+    $registration = Registration::where('event_id', $event->id)
+        ->where('email', $validated['email'])
+        ->first();
+
+    if (!$registration) {
+        return response()->json(['message' => 'Registration not found.'], 404);
+    }
+
+    // Instead of deleting, update with cancellation info
+    $registration->update([
+        'status' => 'cancelled',
+        'cancellation_reason' => $validated['cancellation_reason'],
+        'cancelled_at' => now()
+    ]);
+
+    // Log the cancellation for admin tracking
+    Log::info('Registration cancelled', [
+        'event_id' => $event->id,
+        'event_title' => $event->title,
+        'user_email' => $validated['email'],
+        'cancellation_reason' => $validated['cancellation_reason'],
+        'cancelled_at' => now()
+    ]);
+
+    return response()->json([
+        'message' => 'Registration cancelled successfully.',
+        'cancellation_reason' => $validated['cancellation_reason']
+    ]);
+}
     
    
     public function getRegistrations($id)

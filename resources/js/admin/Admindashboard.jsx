@@ -2,6 +2,7 @@ import "./admin-css/admindashboard.css";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import Swal from 'sweetalert2';
 
 export default function Admindashboard({ events, setEvents, onLogout }) {
   const [showModal, setShowModal] = useState(false);
@@ -83,7 +84,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     if (loading) return;
 
     if (!formData.title || !formData.date || !formData.startTime || !formData.endTime || !formData.location || !formData.description) {
-      alert("Please fill in all required fields including start and end time");
+      Swal.fire({
+        title: 'Missing Information',
+        text: 'Please fill in all required fields',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7',
+        background: '#FFF3E0',
+        color: '#E65100',
+        confirmButtonText: 'OK'
+      });
       return;
     }
 
@@ -111,7 +120,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           }
         });
         setEvents(prev => prev.map(ev => ev.id === editId ? res.data.event : ev));
-        alert("Event updated successfully!");
+          Swal.fire({
+          title: '✅ Event Updated!',
+          text: 'Your event has been updated successfully.',
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
       } else {
         res = await axios.post("http://localhost:8000/api/events", payload, {
           headers: {
@@ -120,7 +137,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           }
         });
         setEvents(prev => [...(prev || []), res.data.event]);
-        alert("Event created successfully!");
+        Swal.fire({
+          title: '🎉 Event Created!',
+          text: 'Your event has been created successfully.',
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
         
         const newEvents = JSON.parse(localStorage.getItem('newEvents') || '[]');
         newEvents.push(res.data.event);
@@ -135,11 +160,35 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         Object.keys(errors).forEach(key => {
           errorMessage += `• ${key}: ${errors[key].join(', ')}\n`;
         });
-        alert(errorMessage);
+        Swal.fire({
+          title: 'Validation Error',
+          html: errorMessage.replace(/\n/g, '<br>'),
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7',
+          background: '#FFEBEE',
+          color: '#C62828',
+          confirmButtonText: 'OK'
+        });
       } else if (err.response?.data?.message) {
-        alert(`Error: ${err.response.data.message}`);
+       Swal.fire({
+          title: 'Error',
+          text: err.response.data.message,
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7',
+          background: '#FFEBEE',
+          color: '#C62828',
+          confirmButtonText: 'OK'
+        });
       } else {
-        alert("Failed to submit event.");
+       Swal.fire({
+          title: 'Error',
+          text: "Failed to submit event.",
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7',
+          background: '#FFEBEE',
+          color: '#C62828',
+          confirmButtonText: 'OK'
+        });
       }
     } finally {
       setLoading(false);
@@ -167,7 +216,20 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
+   const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4FC3F7',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      background: '#FFF3E0',
+      color: '#E65100'
+    });
+
+    if (result.isConfirmed) { 
       try {
         const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:8000/api/events/${id}`, {
@@ -177,10 +239,26 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           }
         });
         setEvents((prev) => (prev || []).filter((ev) => ev.id !== id));
-        alert("Event deleted successfully!");
+        Swal.fire({
+          title: '✅ Deleted!',
+          text: 'Event has been deleted successfully.',
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
       } catch (err) {
         console.error(err);
-        alert("Failed to delete event");
+       Swal.fire({
+          title: 'Error',
+          text: "Failed to delete event",
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7',
+          background: '#FFEBEE',
+          color: '#C62828',
+          confirmButtonText: 'OK'
+        });
       }
     }
   };
@@ -345,7 +423,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           : event
       ));
 
-      alert(`User marked as ${attendance}${attendance === 'absent' ? ' and penalty added' : ''}!`);
+     Swal.fire({
+        title: '✅ Attendance Updated!',
+        text: `User marked as ${attendance}${attendance === 'absent' ? ' and penalty added' : ''}!`,
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7',
+        background: '#E3F2FD',
+        color: '#01579B',
+        confirmButtonText: 'OK'
+      });
     } catch (err) {
       console.error("Error updating attendance:", err);
       let errorMessage = "Failed to update attendance. ";
@@ -358,7 +444,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       } else {
         errorMessage += err.message;
       }
-      alert(errorMessage);
+      Swal.fire({
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7',
+        background: '#FFEBEE',
+        color: '#C62828',
+        confirmButtonText: 'OK'
+      });
     }
   };
 
@@ -377,7 +471,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       });
     } catch (err) {
       console.error("Error loading registrations:", err);
-      alert("Failed to load registrations.");
+       Swal.fire({
+        title: 'Error',
+        text: "Failed to load registrations.",
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7',
+        background: '#FFEBEE',
+        color: '#C62828',
+        confirmButtonText: 'OK'
+      });
     }
   };
 

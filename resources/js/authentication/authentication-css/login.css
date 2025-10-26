@@ -386,3 +386,14 @@ body {
   outline: none;
   border-color: #007bff;
 }
+.login-btn {
+  /* Your existing button styles */
+  text-decoration: none;
+  text-align: center;
+}
+
+a.login-btn {
+  display: inline-block;
+  text-decoration: none;
+  color: white;
+}

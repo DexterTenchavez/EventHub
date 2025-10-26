@@ -6,17 +6,22 @@ import "./authentication-css/login.css";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
+  const [resetToken, setResetToken] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  const token = searchParams.get('token');
   const email = searchParams.get('email');
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (loading) return;
+
+    if (!resetToken) {
+      toast.error("Please enter the reset code from your email");
+      return;
+    }
 
     if (password !== passwordConfirmation) {
       toast.error("Passwords do not match");
@@ -26,7 +31,7 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       const res = await axios.post("http://localhost:8000/api/reset-password", {
-        token,
+        token: resetToken,
         email,
         password,
         password_confirmation: passwordConfirmation
@@ -38,7 +43,7 @@ export default function ResetPassword() {
       console.error("Reset password error:", error);
       
       if (error.response?.status === 400) {
-        toast.error(error.response.data.message || "Invalid or expired reset token");
+        toast.error(error.response.data.message || "Invalid reset code or user not found");
       } else if (error.response?.status === 422) {
         toast.error("Please check your input and try again.");
       } else {
@@ -49,15 +54,24 @@ export default function ResetPassword() {
     }
   };
 
-  if (!token || !email) {
+  if (!email) {
     return (
       <div className="login-container">
         <h1 className="login-title">DAGOHOY EVENTHUB</h1>
         <div className="error-message">
-          <h3>Invalid Reset Link</h3>
-          <p>The password reset link is invalid or has expired.</p>
+          <h3>Reset Password</h3>
+          <p>Please enter your email and the reset code from your email.</p>
+          <div style={{marginTop: '20px'}}>
+            <input
+              className="login-input"
+              type="email"
+              placeholder="Enter your email"
+              value={email || ""}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
           <Link to="/forgot-password" className="login-link">
-            Request New Reset Link
+            Request New Reset Code
           </Link>
         </div>
       </div>
@@ -87,8 +101,18 @@ export default function ResetPassword() {
       
       <form className="login-form" onSubmit={handleResetPassword}>
         <p className="forgot-password-instructions">
-          Enter your new password for <strong>{email}</strong>
+          Enter the reset code from your email and your new password for <strong>{email}</strong>
         </p>
+        
+        <input
+          className="login-input"
+          type="text"
+          placeholder="Enter reset code from email"
+          value={resetToken}
+          onChange={(e) => setResetToken(e.target.value)}
+          required
+          disabled={loading}
+        />
         
         <input
           className="login-input"
@@ -122,7 +146,11 @@ export default function ResetPassword() {
       </form>
       
       <p className="login-text">
-        Remember your password? <Link className="login-link" to="/login">Login</Link> here
+        Remember your password? <Link className="login-link" to="/">Login</Link> here
+      </p>
+      
+      <p className="login-text">
+        Need a new reset code? <Link className="login-link" to="/forgot-password">Request New Code</Link>
       </p>
     </div>
   );
