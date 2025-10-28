@@ -2,22 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens; // ← Add this line
+use Laravel\Sanctum\HasApiTokens;
+use Carbon\Carbon;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable; // ← Add HasApiTokens here
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -30,29 +24,59 @@ class User extends Authenticatable
         'password',
         'role',
         'penalties',
+        'banned_until',
+        'ban_reason',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'banned_until' => 'datetime',
+            'dob' => 'date',
         ];
+    }
+
+    // Add this method to check if user is admin
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    // Check if user is currently banned
+    public function isBanned()
+    {
+        return $this->banned_until && Carbon::now()->lt($this->banned_until);
+    }
+
+    // Get remaining ban days
+    public function getRemainingBanDays()
+    {
+        if (!$this->banned_until || !$this->isBanned()) {
+            return 0;
+        }
+        
+        return Carbon::now()->diffInDays($this->banned_until) + 1; // +1 to include current day
+    }
+
+    // Get ban status
+    public function getBanStatus()
+    {
+        if (!$this->banned_until) {
+            return 'not_banned';
+        }
+        
+        if ($this->isBanned()) {
+            return 'banned';
+        }
+        
+        return 'ban_expired';
     }
 
     public function toArray()
@@ -61,6 +85,9 @@ class User extends Authenticatable
         // Ensure timestamps are always included
         $array['created_at'] = $this->created_at;
         $array['updated_at'] = $this->updated_at;
+        $array['is_banned'] = $this->isBanned();
+        $array['remaining_ban_days'] = $this->getRemainingBanDays();
+        $array['ban_status'] = $this->getBanStatus();
         return $array;
     }
 

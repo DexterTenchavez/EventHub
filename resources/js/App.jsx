@@ -13,6 +13,7 @@ import Admindashboard from "./admin/Admindashboard";
 import Userspenalties from "./admin/Userspenalties";
 
 
+
 import Userdashboard from "./user/Userdashboard";
 import EventsParticipate from "./user/EventsParticipate";
 import Upcomingevents from "./user/Upcomingevents";
@@ -276,6 +277,11 @@ const AppContent = ({ currentUser, events, setEvents, handleLogout, setCurrentUs
           )
         } 
       />
+
+
+
+
+
 
       {/* User Routes */}
       <Route

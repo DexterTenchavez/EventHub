@@ -1,7 +1,7 @@
 /* Material-UI Notifications.css */
 
 .mui-notifications {
-  background: #fafafa;
+background-color: #6eadf1;
   min-height: 100vh;
   font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
 }

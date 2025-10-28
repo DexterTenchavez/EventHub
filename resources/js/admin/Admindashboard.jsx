@@ -542,10 +542,12 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           ☰
         </button>
         <h3 className="title">EventHub</h3>
-        <button className="logout-btn" onClick={handleLogout}>
-          <span className="logout-icon">🚪</span>
-          <span className="logout-text">Logout</span>
-        </button>
+  <button className="logout-btn" onClick={handleLogout}>
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
+    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+  </svg>
+  <span className="logout-text">Logout</span>
+</button>
       </div>
 
       <div className={`sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -566,8 +568,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         />
       )}
 
-      <div className="admin-content">
-        <h1 className="admin-title">Admin Dashboard</h1>
+     
 
         <div className="admin-section">
           <button className="admin-btn-primary" onClick={openCreateModal}>+ Create Event</button>
@@ -893,7 +894,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
             </div>
           </div>
         )}
-      </div>
+     
     </div>
   );
 }
