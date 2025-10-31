@@ -118,7 +118,14 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
         >
           ☰
         </button>
-        <h3 className="title">EventHub</h3>
+        <div className="logo-title-container">
+    <img 
+      src="/images/logo.jpg" 
+      alt="EventHub Logo" 
+      className="topbar-logo"
+    />
+    <h3 className="title">EventHub</h3>
+  </div>
         <div className="topbar-right">
           <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
             <span className="notification-icon">🔔</span>

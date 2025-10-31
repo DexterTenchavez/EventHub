@@ -12,6 +12,9 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showOtherCategory, setShowOtherCategory] = useState(false);
+  const [otherCategory, setOtherCategory] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -19,8 +22,34 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     startTime: "",
     endTime: "",
     location: "",
-    category: "Tech Conference",
+    category: "",
   });
+
+  const categoryImages = {
+    "Barangay Assembly": "/images/barangay_assembly.jpg",
+    "Medical Mission": "/images/Medical_mission.jpg",
+    "Vaccination Drive": "/images/Vaccination.jpg",
+    "Farming Seminar": "/images/Farmer_seminar.jpg",
+    "Town Fiesta": "/images/Town_fiesta.jpg",
+    "Sports Tournament": "/images/SportsFestival.jpg",
+    "Educational Seminar": "/images/Education_seminar.jpg",
+    "Civil Registration": "/images/civil_reg.jpg",
+    "Voters Registration": "/images/Voter_reg.jpg",
+    "Clean-up Drive": "/images/cleanup.jpg",
+    "Wedding": "/images/wedding.jpg",
+    "Tree Planting": "/images/treep_planting.jpg",
+    "Dental Mission": "/images/dentalhealth.jpg",
+    "Nutrition Program": "/images/nutrition.jpg",
+    "TESDA Training": "/images/tesda courses.jpg",
+    "Palarong Barangay": "/images/palarong_barangay.jpg",
+    "4Ps Payout": "/images/4ps.jpg",
+    "Christmas Party": "/images/christmas.jpg",
+   
+  };
+
+  const getCategoryImage = (category) => {
+    return categoryImages[category] || categoryImages["Default"];
+  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -57,6 +86,27 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     fetchUsers();
   }, []);
 
+  const groupEventsByBarangay = () => {
+    const filteredEvents = events.filter(event => 
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const grouped = {};
+    filteredEvents.forEach(event => {
+      const barangay = event.location || 'Unknown';
+      if (!grouped[barangay]) {
+        grouped[barangay] = [];
+      }
+      grouped[barangay].push(event);
+    });
+    return grouped;
+  };
+
+  const barangayGroups = groupEventsByBarangay();
+
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
@@ -66,9 +116,27 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleCategoryChange = (e) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, category: value }));
+    
+    if (value === "Other") {
+      setShowOtherCategory(true);
+    } else {
+      setShowOtherCategory(false);
+      setOtherCategory("");
+    }
+  };
+
+  const handleOtherCategoryChange = (e) => {
+    setOtherCategory(e.target.value);
+  };
+
   const openCreateModal = () => {
     setShowModal(true);
     setIsEditing(false);
+    setShowOtherCategory(false);
+    setOtherCategory("");
     setFormData({
       title: "",
       description: "",
@@ -76,14 +144,16 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       startTime: "",
       endTime: "",
       location: "",
-      category: "Tech Conference",
+      category: "",
     });
   };
 
   const handleSubmit = async () => {
     if (loading) return;
 
-    if (!formData.title || !formData.date || !formData.startTime || !formData.endTime || !formData.location || !formData.description) {
+    const finalCategory = formData.category === "Other" ? otherCategory : formData.category;
+
+    if (!finalCategory || !formData.title || !formData.date || !formData.startTime || !formData.endTime || !formData.location || !formData.description) {
       Swal.fire({
         title: 'Missing Information',
         text: 'Please fill in all required fields',
@@ -108,7 +178,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         end_time: formData.endTime,
         time: `${formData.startTime} - ${formData.endTime}`,
         location: formData.location,
-        category: formData.category,
+        category: finalCategory,
       };
 
       let res;
@@ -120,7 +190,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           }
         });
         setEvents(prev => prev.map(ev => ev.id === editId ? res.data.event : ev));
-          Swal.fire({
+        Swal.fire({
           title: '✅ Event Updated!',
           text: 'Your event has been updated successfully.',
           icon: 'success',
@@ -146,10 +216,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           color: '#01579B',
           confirmButtonText: 'OK'
         });
-        
-        const newEvents = JSON.parse(localStorage.getItem('newEvents') || '[]');
-        newEvents.push(res.data.event);
-        localStorage.setItem('newEvents', JSON.stringify(newEvents));
       }
       setShowModal(false);
     } catch (err) {
@@ -170,7 +236,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           confirmButtonText: 'OK'
         });
       } else if (err.response?.data?.message) {
-       Swal.fire({
+        Swal.fire({
           title: 'Error',
           text: err.response.data.message,
           icon: 'error',
@@ -180,7 +246,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           confirmButtonText: 'OK'
         });
       } else {
-       Swal.fire({
+        Swal.fire({
           title: 'Error',
           text: "Failed to submit event.",
           icon: 'error',
@@ -212,11 +278,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     });
     setEditId(event.id);
     setIsEditing(true);
+    setShowOtherCategory(false);
+    setOtherCategory("");
     setShowModal(true);
   };
 
   const handleDelete = async (id) => {
-   const result = await Swal.fire({
+    const result = await Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
       icon: 'warning',
@@ -250,7 +318,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         });
       } catch (err) {
         console.error(err);
-       Swal.fire({
+        Swal.fire({
           title: 'Error',
           text: "Failed to delete event",
           icon: 'error',
@@ -358,10 +426,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     }
   };
 
-  const eventsWithStatus = (events || []).map((event) => {
-    return { ...event, status: getEventStatus(event) };
-  });
-
   const getTimeRange = (event) => {
     if (event.start_time && event.end_time) {
       const startTime = formatTimeDisplay(event.start_time);
@@ -378,83 +442,105 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   };
 
   const toggleAttendance = async (eventId, registrationId, attendance) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.put(`http://localhost:8000/api/registrations/${registrationId}/attendance`, {
-        attendance: attendance
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (attendance === 'absent') {
-        const registration = selectedEvent.registrations.find(reg => reg.id === registrationId);
-        if (registration && registration.user_id) {
-          try {
-            await axios.post(`http://localhost:8000/api/users/${registration.user_id}/penalty`, {}, {
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            });
-          } catch (penaltyError) {
-            console.error("Error adding penalty:", penaltyError);
-          }
-        }
+  try {
+    const token = localStorage.getItem('token');
+    const res = await axios.put(`http://localhost:8000/api/registrations/${registrationId}/attendance`, {
+      attendance: attendance
+    }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
       }
+    });
 
-      setSelectedEvent(prev => ({
-        ...prev,
-        registrations: prev.registrations.map(reg =>
-          reg.id === registrationId ? { ...reg, attendance } : reg
-        )
-      }));
+    setSelectedEvent(prev => ({
+      ...prev,
+      registrations: prev.registrations.map(reg =>
+        reg.id === registrationId ? { ...reg, attendance } : reg
+      )
+    }));
 
-      setEvents(prev => prev.map(event =>
-        event.id === eventId
-          ? {
-              ...event,
-              registrations: event.registrations.map(reg =>
-                reg.id === registrationId ? { ...reg, attendance } : reg
-              )
-            }
-          : event
-      ));
+    setEvents(prev => prev.map(event =>
+      event.id === eventId
+        ? {
+            ...event,
+            registrations: event.registrations.map(reg =>
+              reg.id === registrationId ? { ...reg, attendance } : reg
+            )
+          }
+        : event
+    ));
 
-     Swal.fire({
+    if (res.data.penalty_added) {
+      Swal.fire({
         title: '✅ Attendance Updated!',
-        text: `User marked as ${attendance}${attendance === 'absent' ? ' and penalty added' : ''}!`,
+        html: `
+          <div style="text-align: left;">
+            <p>User marked as <strong>absent</strong></p>
+            <p>⚠️ <strong>1 penalty</strong> has been automatically added</p>
+            <p>User now has <strong>${res.data.penalties} penalties</strong></p>
+            ${res.data.penalties >= 3 ? 
+              '<p style="color: #ff6b6b;">🚫 User is now BANNED from event registration for 30 days</p>' : 
+              ''
+            }
+          </div>
+        `,
+        icon: 'info',
+        confirmButtonColor: '#4FC3F7',
+        background: '#E3F2FD',
+        color: '#01579B',
+        confirmButtonText: 'OK'
+      });
+    } else if (res.data.penalty_removed) {
+      Swal.fire({
+        title: '✅ Attendance Updated!',
+        html: `
+          <div style="text-align: left;">
+            <p>User marked as <strong>present</strong></p>
+            <p>✅ <strong>1 penalty</strong> has been removed</p>
+            <p>User now has <strong>${res.data.penalties} penalties</strong></p>
+          </div>
+        `,
         icon: 'success',
         confirmButtonColor: '#4FC3F7',
         background: '#E3F2FD',
         color: '#01579B',
         confirmButtonText: 'OK'
       });
-    } catch (err) {
-      console.error("Error updating attendance:", err);
-      let errorMessage = "Failed to update attendance. ";
-      if (err.response?.status === 404) {
-        errorMessage += "Registration not found.";
-      } else if (err.response?.status === 500) {
-        errorMessage += "Server error.";
-      } else if (err.response?.data?.message) {
-        errorMessage += err.response.data.message;
-      } else {
-        errorMessage += err.message;
-      }
+    } else {
       Swal.fire({
-        title: 'Error',
-        text: errorMessage,
-        icon: 'error',
+        title: '✅ Attendance Updated!',
+        text: `User marked as ${attendance}!`,
+        icon: 'success',
         confirmButtonColor: '#4FC3F7',
-        background: '#FFEBEE',
-        color: '#C62828',
+        background: '#E3F2FD',
+        color: '#01579B',
         confirmButtonText: 'OK'
       });
     }
-  };
+  } catch (err) {
+    console.error("Error updating attendance:", err);
+    let errorMessage = "Failed to update attendance. ";
+    if (err.response?.status === 404) {
+      errorMessage += "Registration not found.";
+    } else if (err.response?.status === 500) {
+      errorMessage += "Server error.";
+    } else if (err.response?.data?.message) {
+      errorMessage += err.response.data.message;
+    } else {
+      errorMessage += err.message;
+    }
+    Swal.fire({
+      title: 'Error',
+      text: errorMessage,
+      icon: 'error',
+      confirmButtonColor: '#4FC3F7',
+      background: '#FFEBEE',
+      color: '#C62828',
+      confirmButtonText: 'OK'
+    });
+  }
+};
 
   const handleViewRegistrations = async (event) => {
     try {
@@ -471,7 +557,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       });
     } catch (err) {
       console.error("Error loading registrations:", err);
-       Swal.fire({
+      Swal.fire({
         title: 'Error',
         text: "Failed to load registrations.",
         icon: 'error',
@@ -532,6 +618,21 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     };
   };
 
+  const getAttendanceStats = () => {
+    if (!selectedEvent?.registrations) {
+      return { present: 0, absent: 0, pending: 0, total: 0 };
+    }
+    
+    const present = selectedEvent.registrations.filter(reg => reg.attendance === 'present').length;
+    const absent = selectedEvent.registrations.filter(reg => reg.attendance === 'absent').length;
+    const pending = selectedEvent.registrations.filter(reg => !reg.attendance || reg.attendance === 'pending').length;
+    const total = selectedEvent.registrations.length;
+    
+    return { present, absent, pending, total };
+  };
+
+  const attendanceStats = getAttendanceStats();
+
   return (
     <div className="body">
       <div className="topbars">
@@ -541,13 +642,20 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         >
           ☰
         </button>
-        <h3 className="title">EventHub</h3>
-  <button className="logout-btn" onClick={handleLogout}>
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
-    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-  </svg>
-  <span className="logout-text">Logout</span>
-</button>
+        <div className="logo-title-container">
+          <img 
+            src="/images/logo.jpg" 
+            alt="EventHub Logo" 
+            className="topbar-logo"
+          />
+          <h3 className="title">EventHub</h3>
+        </div>
+        <button className="logout-btn" onClick={handleLogout}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+          </svg>
+          <span className="logout-text">Logout</span>
+        </button>
       </div>
 
       <div className={`sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -568,333 +676,403 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         />
       )}
 
-     
-
-        <div className="admin-section">
-          <button className="admin-btn-primary" onClick={openCreateModal}>+ Create Event</button>
-          
-          <h2>All Events</h2>
-          
-          {eventsWithStatus.length === 0 ? (
-            <div className="empty-state">
-              <p>No events yet. Create your first event!</p>
-            </div>
-          ) : (
-            <div className="events-card-container">
-              {eventsWithStatus.map((event) => (
-                <div key={event.id} className="event-card">
-                  <div className="event-card-header">
-                    <h3 className="event-card-title">{event.title}</h3>
-                    <span className={`table-status event-card-status ${event.status}`}>
-                      {event.status === "upcoming" ? "Upcoming" : 
-                      event.status === "present" ? "Started" : 
-                      "Past Event"}
-                    </span>
-                  </div>
-                  
-                  <div className="event-card-details">
-                    <div className="event-card-detail">
-                      <span className="event-card-label">Date:</span>
-                      <span className="event-card-value">
-                        {new Date(event.date).toLocaleDateString('en-US', {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    <div className="event-card-detail">
-                      <span className="event-card-label">Time:</span>
-                      <span className="event-card-value">{getTimeRange(event)}</span>
-                    </div>
-                    <div className="event-card-detail">
-                      <span className="event-card-label">Location:</span>
-                      <span className="event-card-value">{event.location}</span>
-                    </div>
-                    <div className="event-card-detail">
-                      <span className="event-card-label">Category:</span>
-                      <span className="event-card-value">{event.category}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="event-description-container">
-                    <div className="event-description-label">Description:</div>
-                    <div className="event-description-scroll">
-                      <p className="event-description-text">{event.description}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="event-card-actions">
-                    <button 
-                      className="table-btn edit"
-                      onClick={() => handleEdit(event)}
-                    >
-                      Edit
-                    </button>
-                    <button 
-                      className="table-btn registrations"
-                      onClick={() => handleViewRegistrations(event)}
-                    >
-                      Attendance
-                    </button>
-                    <button 
-                      className="table-btn delete"
-                      onClick={() => handleDelete(event.id)}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="admin-section">
+        <button className="admin-btn-primary" onClick={openCreateModal}>+ Create Event</button>
+        
+        <div className="search-container">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Search events by title, description, location, or category..."
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button className="search-btn">
+              Search
+            </button>
+          </div>
         </div>
-
-        {showModal && (
-          <div className="admin-modal-overlay" onClick={() => !loading && setShowModal(false)}>
-            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="admin-modal-header">
-                <h2>{isEditing ? "Edit Event" : "Create Event"}</h2>
-                <button 
-                  className="admin-modal-close" 
-                  onClick={() => !loading && setShowModal(false)}
-                  disabled={loading}
-                >
-                  ×
-                </button>
+        
+        <h2>All Events</h2>
+        
+        {events.length === 0 ? (
+          <div className="empty-state">
+            <p>No events yet. Create your first event!</p>
+          </div>
+        ) : Object.keys(barangayGroups).length === 0 ? (
+          <div className="empty-state">
+            <p>No events found matching your search.</p>
+          </div>
+        ) : (
+          <div className="events-container">
+            {Object.keys(barangayGroups).map(barangay => (
+              <div key={barangay} className="barangay-group">
+                <div className="barangay-header">
+                  {barangay} ({barangayGroups[barangay].length} events)
+                </div>
+                <div className="events-grid">
+                  {barangayGroups[barangay].map((event) => {
+                    const eventStatus = getEventStatus(event);
+                    const categoryImage = getCategoryImage(event.category);
+                    
+                    return (
+                      <div 
+                        key={event.id} 
+                        className="event-card"
+                        style={{
+                          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${categoryImage})`
+                        }}
+                      >
+                        <div className="event-card-overlay">
+                          <div className="event-card-header">
+                            <h3 className="event-card-title">{event.title}</h3>
+                            <span className={`table-status event-card-status ${eventStatus}`}>
+                              {eventStatus === "upcoming" ? "Upcoming" : 
+                              eventStatus === "present" ? "Started" : 
+                              "Past Event"}
+                            </span>
+                          </div>
+                          
+                          <div className="event-card-details">
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Date:</span>
+                              <span className="event-card-value">
+                                {new Date(event.date).toLocaleDateString('en-US', {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Time:</span>
+                              <span className="event-card-value">{getTimeRange(event)}</span>
+                            </div>
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Location:</span>
+                              <span className="event-card-value">{event.location}</span>
+                            </div>
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Category:</span>
+                              <span className="event-card-value category-badge">{event.category}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="event-description-container">
+                            <div className="event-description-label">Description:</div>
+                            <div className="event-description-scroll">
+                              <p className="event-description-text">{event.description}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="event-card-actions">
+                            <button 
+                              className="table-btn edit"
+                              onClick={() => handleEdit(event)}
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              className="table-btn registrations"
+                              onClick={() => handleViewRegistrations(event)}
+                            >
+                              Attendance
+                            </button>
+                            <button 
+                              className="table-btn delete"
+                              onClick={() => handleDelete(event.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="admin-form">
-                {loading && (
-                  <div className="modal-loading-overlay">
-                    <div className="modal-loading-spinner"></div>
-                    <p>{isEditing ? "Updating Event..." : "Creating Event..."}</p>
-                  </div>
-                )}
-                
-                <div className={loading ? "form-content loading" : "form-content"}>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <div className="admin-modal-overlay" onClick={() => !loading && setShowModal(false)}>
+          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h2>{isEditing ? "Edit Event" : "Create Event"}</h2>
+              <button 
+                className="admin-modal-close" 
+                onClick={() => !loading && setShowModal(false)}
+                disabled={loading}
+              >
+                ×
+              </button>
+            </div>
+            <div className="admin-form">
+              {loading && (
+                <div className="modal-loading-overlay">
+                  <div className="modal-loading-spinner"></div>
+                  <p>{isEditing ? "Updating Event..." : "Creating Event..."}</p>
+                </div>
+              )}
+              
+              <div className={loading ? "form-content loading" : "form-content"}>
+                <div className="admin-form-group">
+                  <label>Title *</label>
+                  <input 
+                    type="text" 
+                    name="title" 
+                    value={formData.title} 
+                    onChange={handleInputChange}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Category *</label>
+                  <select 
+                    name="category" 
+                    value={formData.category} 
+                    onChange={handleCategoryChange}
+                    disabled={loading}
+                  >
+                    <option value="">Select a category</option>
+                    <option value="Barangay Assembly">Barangay Assembly</option>
+                    <option value="Medical Mission">Medical Mission</option>
+                    <option value="Vaccination Drive">Vaccination Drive</option>
+                    <option value="Farming Seminar">Farming Seminar</option>
+                    <option value="Town Fiesta">Town Fiesta</option>
+                    <option value="Sports Tournament">Sports Tournament</option>
+                    <option value="Educational Seminar">Educational Seminar</option>
+                    <option value="Civil Registration">Civil Registration</option>
+                    <option value="Voters Registration">Voters Registration</option>
+                    <option value="Clean-up Drive">Clean-up Drive</option>
+                    <option value="Wedding">Wedding</option>
+                    <option value="Tree Planting">Tree Planting</option>
+                    <option value="Dental Mission">Dental Mission</option>
+                    <option value="Nutrition Program">Nutrition Program</option>
+                    <option value="TESDA Training">TESDA Training</option>
+                    <option value="Palarong Barangay">Palarong Barangay</option>
+                    <option value="4Ps Payout">4Ps Payout</option>
+                    <option value="Christmas Party">Christmas Party</option>
+                    <option value="Other">Other (Please specify below)</option>
+                  </select>
+                </div>
+                {showOtherCategory && (
                   <div className="admin-form-group">
-                    <label>Title *</label>
+                    <label>Specify Category *</label>
                     <input 
                       type="text" 
-                      name="title" 
-                      value={formData.title} 
-                      onChange={handleInputChange}
+                      name="otherCategory" 
+                      value={otherCategory}
+                      onChange={handleOtherCategoryChange}
+                      placeholder="Enter your custom category..."
                       disabled={loading}
                     />
                   </div>
-                  <div className="admin-form-group">
-                    <label>Category *</label>
-                    <select 
-                      name="category" 
-                      value={formData.category} 
-                      onChange={handleInputChange}
-                      disabled={loading}
-                    >
-                      <option value="">Select a category</option>
-                      <optgroup label="Professional">
-                        <option value="Tech Conference">Tech Conference</option>
-                        <option value="Business Summit">Business Summit</option>
-                        <option value="Workshop">Workshop</option>
-                        <option value="Networking Event">Networking Event</option>
-                      </optgroup>
-                      <optgroup label="Entertainment">
-                        <option value="Music Festival">Music Festival</option>
-                        <option value="Concert">Concert</option>
-                        <option value="Art Exhibition">Art Exhibition</option>
-                        <option value="Film Screening">Film Screening</option>
-                      </optgroup>
-                      <optgroup label="Sports & Wellness">
-                        <option value="Sports Tournament">Sports Tournament</option>
-                        <option value="Marathon">Marathon</option>
-                        <option value="Yoga Class">Yoga Class</option>
-                        <option value="Fitness Competition">Fitness Competition</option>
-                      </optgroup>
-                      <optgroup label="Community">
-                        <option value="Charity Event">Charity Event</option>
-                        <option value="Community Meeting">Community Meeting</option>
-                        <option value="Cultural Festival">Cultural Festival</option>
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Description *</label>
-                    <textarea 
-                      name="description" 
-                      value={formData.description} 
-                      onChange={handleInputChange} 
-                      rows="2"
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Date *</label>
-                    <input
-                      type="date"
-                      name="date"
-                      value={formData.date}
-                      onChange={handleInputChange}
-                      min={new Date().toISOString().split("T")[0]}
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Start Time *</label>
-                    <input
-                      type="time"
-                      name="startTime"
-                      value={formData.startTime}
-                      onChange={handleInputChange}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>End Time *</label>
-                    <input
-                      type="time"
-                      name="endTime"
-                      value={formData.endTime}
-                      onChange={handleInputChange}
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Location *</label>
-                    <select 
-                      name="location" 
-                      value={formData.location} 
-                      onChange={handleInputChange}
-                      disabled={loading}
-                    >
-                      <option value="">Select a location</option>
-                      <option value="Anibongan">Anibongan</option>
-                      <option value="Babag">Babag</option>
-                      <option value="Cagawasan">Cagawasan</option>
-                      <option value="Cagawitan">Cagawitan</option>
-                      <option value="Caluasan">Caluasan</option>
-                      <option value="Candelaria">Candelaria</option>
-                      <option value="Can-oling">Can-oling</option>
-                      <option value="Estaca">Estaca</option>
-                      <option value="La Esperanza">La Esperanza</option>
-                      <option value="Liberty">Liberty</option>
-                      <option value="Magcagong">Magcagong</option>
-                      <option value="Malibago">Malibago</option>
-                      <option value="Mampas">Mampas</option>
-                      <option value="Napo">Napo</option>
-                      <option value="Poblacion">Poblacion</option>
-                      <option value="San Isidro">San Isidro</option>
-                      <option value="San Jose">San Jose</option>
-                      <option value="San Miguel">San Miguel</option>
-                      <option value="San Roque">San Roque</option>
-                      <option value="San Vicente">San Vicente</option>
-                      <option value="Santo Rosario">Santo Rosario</option>
-                      <option value="Santa Cruz">Santa Cruz</option>
-                      <option value="Santa Fe">Santa Fe</option>
-                      <option value="Santa Lucia">Santa Lucia</option>
-                      <option value="Santa Rosa">Santa Rosa</option>
-                      <option value="Santo Niño">Santo Niño</option>
-                      <option value="Santo Tomas">Santo Tomas</option>
-                      <option value="Santo Niño de Panglao">Santo Niño de Panglao</option>
-                      <option value="Taytay">Taytay</option>
-                      <option value="Tigbao">Tigbao</option>
-                    </select>
-                  </div>
-                  <div className="admin-form-actions">
-                    <button 
-                      className="admin-btn-cancel" 
-                      onClick={() => setShowModal(false)}
-                      disabled={loading}
-                    >
-                      Cancel
-                    </button>
-                    <button 
-                      className={`admin-btn-submit ${loading ? 'loading' : ''}`} 
-                      onClick={handleSubmit}
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <span className="button-spinner"></span>
-                          {isEditing ? "Updating..." : "Creating..."}
-                        </>
-                      ) : (
-                        isEditing ? "Update" : "Create"
-                      )}
-                    </button>
-                  </div>
+                )}
+                <div className="admin-form-group">
+                  <label>Description *</label>
+                  <textarea 
+                    name="description" 
+                    value={formData.description} 
+                    onChange={handleInputChange} 
+                    rows="2"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Date *</label>
+                  <input
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    min={new Date().toISOString().split("T")[0]}
+                    disabled={loading}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Start Time *</label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={formData.startTime}
+                    onChange={handleInputChange}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>End Time *</label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleInputChange}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                <div className="admin-form-group">
+                  <label>Location *</label>
+                  <select 
+                    name="location" 
+                    value={formData.location} 
+                    onChange={handleInputChange}
+                    disabled={loading}
+                  >
+                    <option value="">Select a location</option>
+                    <option value="Anibongan">Anibongan</option>
+                    <option value="Babag">Babag</option>
+                    <option value="Cagawasan">Cagawasan</option>
+                    <option value="Cagawitan">Cagawitan</option>
+                    <option value="Caluasan">Caluasan</option>
+                    <option value="Candelaria">Candelaria</option>
+                    <option value="Can-oling">Can-oling</option>
+                    <option value="Estaca">Estaca</option>
+                    <option value="La Esperanza">La Esperanza</option>
+                    <option value="Liberty">Liberty</option>
+                    <option value="Magcagong">Magcagong</option>
+                    <option value="Malibago">Malibago</option>
+                    <option value="Mampas">Mampas</option>
+                    <option value="Napo">Napo</option>
+                    <option value="Poblacion">Poblacion</option>
+                    <option value="San Isidro">San Isidro</option>
+                    <option value="San Jose">San Jose</option>
+                    <option value="San Miguel">San Miguel</option>
+                    <option value="San Roque">San Roque</option>
+                    <option value="San Vicente">San Vicente</option>
+                    <option value="Santo Rosario">Santo Rosario</option>
+                    <option value="Santa Cruz">Santa Cruz</option>
+                    <option value="Santa Fe">Santa Fe</option>
+                    <option value="Santa Lucia">Santa Lucia</option>
+                    <option value="Santa Rosa">Santa Rosa</option>
+                    <option value="Santo Niño">Santo Niño</option>
+                    <option value="Santo Tomas">Santo Tomas</option>
+                    <option value="Santo Niño de Panglao">Santo Niño de Panglao</option>
+                    <option value="Taytay">Taytay</option>
+                    <option value="Tigbao">Tigbao</option>
+                  </select>
+                </div>
+                <div className="admin-form-actions">
+                  <button 
+                    className="admin-btn-cancel" 
+                    onClick={() => setShowModal(false)}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    className={`admin-btn-submit ${loading ? 'loading' : ''}`} 
+                    onClick={handleSubmit}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="button-spinner"></span>
+                        {isEditing ? "Updating..." : "Creating..."}
+                      </>
+                    ) : (
+                      isEditing ? "Update" : "Create"
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {selectedEvent && (
-          <div className="admin-modal-overlay" onClick={() => setSelectedEvent(null)}>
-            <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
-              <div className="admin-modal-header">
-                <h2>Registrations for {selectedEvent.title}</h2>
-                <button className="admin-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
-              </div>
-              <div className="admin-form">
-                {selectedEvent.registrations && selectedEvent.registrations.length > 0 ? (
-                  <div>
-                    <p><strong>Total Registrations:</strong> {selectedEvent.registrations.length}</p>
-                    <div className="table-container">
-                      <table className="admin-table responsive-table">
-                        <thead>
-                          <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Barangay</th>
-                            <th>Purok</th>
-                            <th>Attendance</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedEvent.registrations.map((reg) => (
-                            <tr key={reg.id}>
-                              <td data-label="Name">{reg.name}</td>
-                              <td data-label="Email">{reg.email}</td>
-                              <td data-label="Barangay">{getUserDetails(reg.email).barangay}</td>
-                              <td data-label="Purok">{getUserDetails(reg.email).purok}</td>
-                              <td data-label="Attendance" className={
-                                reg.attendance === 'present' ? 'status-present' :
-                                reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
-                              }>
-                                {reg.attendance || "Pending"}
-                              </td>
-                              <td data-label="Actions" className="attendance-actions">
-                                <button 
-                                  className="btn-present"
-                                  onClick={() => toggleAttendance(selectedEvent.id, reg.id, "present")}
-                                  disabled={reg.attendance === 'present'}
-                                >
-                                  Present
-                                </button>
-                                <button 
-                                  className="btn-absent"
-                                  onClick={() => toggleAttendance(selectedEvent.id, reg.id, "absent")}
-                                  disabled={reg.attendance === 'absent'}
-                                >
-                                  Absent
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+      {selectedEvent && (
+        <div className="admin-modal-overlay" onClick={() => setSelectedEvent(null)}>
+          <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="attendance-modal-header">
+              <h2>Registrations for {selectedEvent.title}</h2>
+              <button className="admin-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
+            </div>
+            <div className="admin-form">
+              <div className="attendance-summary">
+                <h3>Attendance Summary</h3>
+                <div className="attendance-stats">
+                  <div className="stat-card present">
+                    <div className="stat-number present">{attendanceStats.present}</div>
+                    <div className="stat-label">Present</div>
                   </div>
-                ) : (
-                  <p>No registrations yet.</p>
-                )}
+                  <div className="stat-card absent">
+                    <div className="stat-number absent">{attendanceStats.absent}</div>
+                    <div className="stat-label">Absent</div>
+                  </div>
+                  <div className="stat-card pending">
+                    <div className="stat-number pending">{attendanceStats.pending}</div>
+                    <div className="stat-label">Pending</div>
+                  </div>
+                  <div className="stat-card total">
+                    <div className="stat-number total">{attendanceStats.total}</div>
+                    <div className="stat-label">Total</div>
+                  </div>
+                </div>
               </div>
+
+              {selectedEvent.registrations && selectedEvent.registrations.length > 0 ? (
+                <div className="attendance-table-container">
+                  <table className="admin-table responsive-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Barangay</th>
+                        <th>Purok</th>
+                  <th>Attendance</th>
+                        <th>Actions</th>
+                        
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedEvent.registrations.map((reg) => (
+                        <tr key={reg.id}>
+                          <td data-label="Name">{reg.name}</td>
+                          <td data-label="Email">{reg.email}</td>
+                          <td data-label="Barangay">{getUserDetails(reg.email).barangay}</td>
+                          <td data-label="Purok">{getUserDetails(reg.email).purok}</td>
+                     <td data-label="Attendance">
+                        <span className={
+                          reg.attendance === 'present' ? 'status-present' :
+                          reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
+                        }>
+                          {reg.attendance || "Pending"}
+                        </span>
+                      </td>
+                          <td data-label="Actions" className="attendance-actions">
+                            <button 
+                              className="btn-present"
+                              onClick={() => toggleAttendance(selectedEvent.id, reg.id, "present")}
+                              disabled={reg.attendance === 'present'}
+                            >
+                              Present
+                            </button>
+                            <button 
+                              className="btn-absent"
+                              onClick={() => toggleAttendance(selectedEvent.id, reg.id, "absent")}
+                              disabled={reg.attendance === 'absent'}
+                            >
+                              Absent
+                            </button>
+                          </td>
+                           
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p>No registrations yet.</p>
+              )}
             </div>
           </div>
-        )}
-     
+        </div>
+      )}
     </div>
   );
 }

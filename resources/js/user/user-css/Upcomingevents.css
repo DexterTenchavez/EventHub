@@ -20,6 +20,58 @@ body{
   z-index: 100;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
 }
+/* Logo and Title Styles */
+.logo-title-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-logo {
+  height: 35px;
+  width: 35px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* Adjust title spacing */
+.user-topbar .title {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .logo-title-container {
+    gap: 8px;
+  }
+  
+  .topbar-logo {
+    height: 30px;
+    width: 30px;
+  }
+  
+  .user-topbar .title {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-title-container {
+    gap: 6px;
+  }
+  
+  .topbar-logo {
+    height: 25px;
+    width: 25px;
+  }
+  
+  .user-topbar .title {
+    font-size: 16px;
+  }
+}
 
 .upcomingevents-topbar .title{
     color: #ffffff;

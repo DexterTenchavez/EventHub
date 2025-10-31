@@ -80,7 +80,6 @@ export default function Notifications({ currentUser }) {
     }
   };
 
-  // ==== ADDED: Save event notification to database ====
   const saveEventNotificationToDB = async (event, status, minutes = null) => {
     try {
       const token = getToken();
@@ -92,7 +91,6 @@ export default function Notifications({ currentUser }) {
 
       const title = status === 'starts soon' ? `Event Starting Soon ⏰` : `Event Started! 🎉`;
 
-      // Create notification in backend
       const response = await fetch('http://localhost:8000/api/notifications', {
         method: 'POST',
         headers: {
@@ -109,7 +107,6 @@ export default function Notifications({ currentUser }) {
 
       if (response.ok) {
         console.log('Event notification saved to database');
-        // Reload notifications to show the new one
         loadNotifications();
       } else {
         console.error('Failed to save notification to database');
@@ -119,7 +116,6 @@ export default function Notifications({ currentUser }) {
     }
   };
 
-  // ==== ADDED: Check for upcoming events and save to DB ====
   const checkUpcomingEvents = async () => {
     try {
       const token = getToken();
@@ -149,13 +145,11 @@ export default function Notifications({ currentUser }) {
             const timeUntilEvent = eventDateTime.getTime() - now.getTime();
             const minutesUntilEvent = Math.floor(timeUntilEvent / (1000 * 60));
 
-            // Check if event starts soon (5-30 minutes)
             if (minutesUntilEvent > 0 && minutesUntilEvent <= 30) {
               const notificationKey = `event-${event.id}-starts-soon`;
               const lastNotified = localStorage.getItem(notificationKey);
               
               if (!lastNotified || (now - new Date(lastNotified)) > 60000) {
-                // Check if we already have this notification in our current state
                 const existingNotification = notifications.find(notif => 
                   notif.event_id === event.id && 
                   notif.title.includes('Starting Soon')
@@ -168,7 +162,6 @@ export default function Notifications({ currentUser }) {
               }
             }
             
-            // Check if event has started (0 to -10 minutes)
             if (minutesUntilEvent <= 0 && minutesUntilEvent >= -10) {
               const notificationKey = `event-${event.id}-started`;
               const lastNotified = localStorage.getItem(notificationKey);
@@ -286,19 +279,17 @@ export default function Notifications({ currentUser }) {
     toast.success('Notification archived');
   };
 
-  // Auto-refresh notifications every 30 seconds + check events
   useEffect(() => {
     loadNotifications();
     
     const interval = setInterval(() => {
       loadNotifications();
-      checkUpcomingEvents(); // Check for new events every 30 seconds
+      checkUpcomingEvents();
     }, 30000);
     
     return () => clearInterval(interval);
   }, []);
 
-  // Also check events when component mounts
   useEffect(() => {
     if (currentUser) {
       checkUpcomingEvents();

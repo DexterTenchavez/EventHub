@@ -9,6 +9,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [notificationCount, setNotificationCount] = useState(0);
   const [lastActionTime, setLastActionTime] = useState(0);
   const [actionCount, setActionCount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState(""); // NEW: Search state
 
   // Rate limiting: max 5 actions per minute
   const canPerformAction = () => {
@@ -80,6 +81,28 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
+
+  // NEW: Group events by barangay with search filter
+  const groupEventsByBarangay = () => {
+    const filteredEvents = events.filter(event => 
+      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      event.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const grouped = {};
+    filteredEvents.forEach(event => {
+      const barangay = event.location || 'Unknown';
+      if (!grouped[barangay]) {
+        grouped[barangay] = [];
+      }
+      grouped[barangay].push(event);
+    });
+    return grouped;
+  };
+
+  const barangayGroups = groupEventsByBarangay();
 
   if (!currentUser) return <p>Loading...</p>;
 
@@ -250,93 +273,61 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     });
   };
 
-  const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
-    // Check rate limiting
-    if (!canPerformAction()) {
-      return;
-    }
+ const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
+  if (!canPerformAction()) return;
 
+  try {
+    const token = localStorage.getItem('token');
     const event = events.find((e) => e.id === eventId);
-    if (!event) return;
-
     const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
 
-    try {
-      const token = localStorage.getItem('token');
-      let res;
-
-      if (isRegistered) {
-        // For cancellation, include reason
-        res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
-          email: currentUser.email,
-          cancellation_reason: reasonType || cancellationReason
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        Swal.fire({
-          title: 'Registration Cancelled',
-          html: `
-            <p>Your registration has been cancelled successfully.</p>
-            <p><strong>Reason:</strong> ${getReasonText(cancellationReason, reasonType)}</p>
-          `,
-          icon: 'success',
-          confirmButtonColor: '#4FC3F7'
-        });
-      } else {
-        // For registration
-        res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
-          name: currentUser.name,
-          email: currentUser.email,
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        Swal.fire({
-          title: 'Registration Successful!',
-          text: 'You have successfully registered for this event!',
-          icon: 'success',
-          confirmButtonColor: '#4FC3F7'
-        });
-      }
-
-      if (res.data.event) {
-        setEvents(prevEvents =>
-          prevEvents.map(ev =>
-            ev.id === eventId ? res.data.event : ev
-          )
-        );
-      } else {
-        setEvents(prevEvents =>
-          prevEvents.map(ev =>
-            ev.id === eventId
-              ? {
-                  ...ev,
-                  registrations: (ev.registrations || []).filter(
-                    r => r.email !== currentUser.email
-                  ),
-                }
-              : ev
-          )
-        );
-      }
-
-    } catch (err) {
-      console.error(err);
-      Swal.fire({
-        title: 'Error',
-        text: err.response?.data?.message || "Failed to update registration. Please try again.",
-        icon: 'error',
-        confirmButtonColor: '#4FC3F7'
+    let res;
+    if (isRegistered) {
+      res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
+        email: currentUser.email,
+        cancellation_reason: reasonType || cancellationReason
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } else {
+      res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
+        name: currentUser.name,
+        email: currentUser.email,
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
     }
-  };
+
+    // Update events state with the returned event data
+    if (res.data.event) {
+      setEvents(prevEvents =>
+        prevEvents.map(ev =>
+          ev.id === eventId ? res.data.event : ev
+        )
+      );
+    } else {
+      // Fallback: refresh all events
+      const eventsRes = await axios.get("http://localhost:8000/api/events");
+      setEvents(eventsRes.data);
+    }
+
+    Swal.fire({
+      title: isRegistered ? 'Cancelled!' : 'Registered!',
+      text: isRegistered ? 'Registration cancelled.' : 'Successfully registered!',
+      icon: 'success',
+      confirmButtonColor: '#4FC3F7'
+    });
+
+  } catch (err) {
+    console.error('Error:', err.response?.data || err.message);
+    Swal.fire({
+      title: 'Error',
+      text: err.response?.data?.message || 'Operation failed',
+      icon: 'error',
+      confirmButtonColor: '#4FC3F7'
+    });
+  }
+};
 
   const getReasonText = (reason, reasonType) => {
     const reasonMap = {
@@ -358,7 +349,15 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
         >
           ☰
         </button>
-        <h3 className="title">EventHub</h3>
+        
+         <div className="logo-title-container">
+    <img 
+      src="/images/logo.jpg" 
+      alt="EventHub Logo" 
+      className="topbar-logo"
+    />
+    <h3 className="title">EventHub</h3>
+  </div>
         <div className="topbar-right">
           <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
             <span className="notification-icon">🔔</span>
@@ -397,64 +396,94 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       <div className="user-content">
         <h2>Available Events</h2>
 
+        {/* NEW: Search Bar */}
+        <div className="search-container">
+          <div className="search-box">
+            <input
+              type="text"
+              placeholder="Search events by title, description, location, or category..."
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button className="search-btn">
+              Search
+            </button>
+          </div>
+        </div>
+
         {events.length === 0 ? (
           <div className="empty-state">
             <h3>No events available</h3>
             <p>Please wait for the admin to create some events!</p>
           </div>
+        ) : Object.keys(barangayGroups).length === 0 ? (
+          <div className="empty-state">
+            <p>No events found matching your search.</p>
+          </div>
         ) : (
-          <div className="event-card-container">
-            {events.map(event => {
-              const status = getEventStatus(event);
-              const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
-
-              return (
-                <div className="event-card" key={event.id}>
-                  <h3>{event.title}</h3>
-                  <p><strong>Category:</strong> {event.category}</p>
-                  <p><strong>Date & Time:</strong> {new Date(event.date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })} at {getTimeRange(event)}</p>
-                  <p><strong>Location:</strong> {event.location}</p>
-                  
-                  <div className="event-description-container">
-                    <div className="event-description-label">Description:</div>
-                    <div className="event-description-scroll">
-                      <p className="event-description-text">{event.description}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="event-card-footer">
-                    <p><strong>Status:</strong> 
-                      <span className={`status-badge ${status}`}>
-                        {status === "upcoming" ? "Upcoming" : 
-                         status === "present" ? "Started" : 
-                         "Past Event"}
-                      </span>
-                    </p>
-
-                    {status === "upcoming" && (
-                      <button
-                        onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
-                        className={isRegistered ? "cancel-btn" : "register-btn"}
-                      >
-                        {isRegistered ? "Cancel Registration" : "Register Now"}
-                      </button>
-                    )}
-
-                    {status === "present" && (
-                      <p className="present-event-message">Event is currently happening - Registration closed</p>
-                    )}
-
-                    {status === "past" && (
-                      <p className="past-event-message">This event has already passed</p>
-                    )}
-                  </div>
+          <div className="events-container">
+            {/* NEW: Group events by barangay */}
+            {Object.keys(barangayGroups).map(barangay => (
+              <div key={barangay} className="barangay-group">
+                <div className="barangay-header">
+                  {barangay} ({barangayGroups[barangay].length} events)
                 </div>
-              );
-            })}
+                <div className="event-card-container">
+                  {barangayGroups[barangay].map(event => {
+                    const status = getEventStatus(event);
+                    const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
+
+                    return (
+                      <div className="event-card" key={event.id}>
+                        <h3>{event.title}</h3>
+                        <p><strong>Category:</strong> {event.category}</p>
+                        <p><strong>Date & Time:</strong> {new Date(event.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })} at {getTimeRange(event)}</p>
+                        <p><strong>Location:</strong> {event.location}</p>
+                        
+                        <div className="event-description-container">
+                          <div className="event-description-label">Description:</div>
+                          <div className="event-description-scroll">
+                            <p className="event-description-text">{event.description}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="event-card-footer">
+                          <p><strong>Status:</strong> 
+                            <span className={`status-badge ${status}`}>
+                              {status === "upcoming" ? "Upcoming" : 
+                               status === "present" ? "Started" : 
+                               "Past Event"}
+                            </span>
+                          </p>
+
+                          {status === "upcoming" && (
+                            <button
+                              onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
+                              className={isRegistered ? "cancel-btn" : "register-btn"}
+                            >
+                              {isRegistered ? "Cancel Registration" : "Register Now"}
+                            </button>
+                          )}
+
+                          {status === "present" && (
+                            <p className="present-event-message">Event is currently happening - Registration closed</p>
+                          )}
+
+                          {status === "past" && (
+                            <p className="past-event-message">This event has already passed</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

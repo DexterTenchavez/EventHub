@@ -10,7 +10,7 @@ const barangaysWithPuroks = {
   "Cagawasan": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
   "Cagawitan": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
   "Caluasan": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
-  "Candelaria": ["Purok 1", "Purok 2", "Purok 3", "Purok 4"],
+  "Candelaria": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
   "Can-oling": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
   "Estaca": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
   "La Esperanza": ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"],
@@ -44,10 +44,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-  }
+  },
+  timeout: 10000,
 });
 
-// Add request interceptor to include auth token
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -56,7 +56,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Add response interceptor to handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -104,38 +103,31 @@ export default function Userspenalties({ currentUser, onLogout }) {
       setLoading(true);
       setError(null);
       
-      await Promise.all([
+      if (!currentUser || currentUser.role !== 'admin') {
+        throw new Error('Admin privileges required');
+      }
+
+      const results = await Promise.allSettled([
         fetchUsers(),
         fetchEvents()
       ]);
-    } catch (err) {
-      console.error("Error fetching data:", err);
+
+      const usersFailed = results[0].status === 'rejected';
+      const eventsFailed = results[1].status === 'rejected';
       
-      if (err.response?.status === 401) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Session Expired',
-          text: 'Your session has expired. Please login again.',
-          confirmButtonText: 'OK'
-        }).then(() => {
-          handleLogout();
-        });
-      } else if (err.response?.status === 403) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Permission Denied',
-          text: 'You do not have permission to access this page.',
-          confirmButtonText: 'OK'
-        });
-      } else {
-        setError("Failed to load data");
-        Swal.fire({
-          icon: 'error',
-          title: 'Loading Failed',
-          text: 'Failed to load data. Please check your connection and try again.',
-          confirmButtonText: 'Retry'
-        });
+      if (usersFailed) {
+        console.warn('Users fetch failed, using empty array');
+        setUsers([]);
       }
+      
+      if (eventsFailed) {
+        console.warn('Events fetch failed, using empty array');
+        setEvents([]);
+      }
+
+    } catch (err) {
+      console.error("Error in fetchAllData:", err);
+      setError(err.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -143,20 +135,81 @@ export default function Userspenalties({ currentUser, onLogout }) {
 
   const fetchUsers = async () => {
     try {
+      console.log("Fetching users from /api/users...");
+      
+      const token = localStorage.getItem('token');
+      console.log("Auth token:", token ? "Present" : "Missing");
+      
+      console.log("Current user:", currentUser);
+      
       const res = await api.get("/users");
-      setUsers(res.data);
+      console.log("Users data received:", res.data);
+      setUsers(res.data || []);
+      return res.data;
     } catch (err) {
       console.error("Error fetching users:", err);
+      console.error("Error details:", {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        headers: err.response?.headers
+      });
+      
+      let errorMessage = "Failed to load users";
+      if (err.code === 'ECONNABORTED') {
+        errorMessage = "Request timeout - server is not responding";
+      } else if (err.response?.status === 403) {
+        const serverMessage = err.response?.data?.message || 'Admin access required';
+        const userRole = err.response?.data?.your_role || 'unknown';
+        errorMessage = `${serverMessage}. Your role: ${userRole}`;
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Admin Access Required',
+          html: `
+            <div style="text-align: left;">
+              <p><strong>Error:</strong> ${serverMessage}</p>
+              <p><strong>Your Role:</strong> ${userRole}</p>
+              <p><strong>Required Role:</strong> admin</p>
+              <p style="margin-top: 15px; font-size: 14px; color: #ccc;">
+                Please contact system administrator to update your role to 'admin'.
+              </p>
+            </div>
+          `,
+          confirmButtonText: 'OK',
+          background: '#1e1e1e',
+          color: 'white'
+        });
+      } else if (err.response?.status === 500) {
+        errorMessage = "Server error - please try again later";
+      }
+      
+      if (err.response?.status !== 403) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Limited Access',
+          text: errorMessage,
+          confirmButtonText: 'OK',
+          background: '#1e1e1e',
+          color: 'white'
+        });
+      }
+      
+      setUsers([]);
       throw err;
     }
   };
 
   const fetchEvents = async () => {
     try {
+      console.log("Fetching events from /api/events...");
       const res = await api.get("/events");
-      setEvents(res.data);
+      console.log("Events data received:", res.data);
+      setEvents(res.data || []);
+      return res.data;
     } catch (err) {
       console.error("Error fetching events:", err);
+      setEvents([]);
       throw err;
     }
   };
@@ -166,9 +219,13 @@ export default function Userspenalties({ currentUser, onLogout }) {
     setShowAttendanceModal(true);
   };
 
-  // Get registrations from events data
   const getAllRegistrations = () => {
     const allRegistrations = [];
+    
+    if (!events || !Array.isArray(events)) {
+      return allRegistrations;
+    }
+    
     events.forEach(event => {
       if (event.registrations && Array.isArray(event.registrations)) {
         event.registrations.forEach(reg => {
@@ -187,16 +244,18 @@ export default function Userspenalties({ currentUser, onLogout }) {
     return allRegistrations;
   };
 
-  // Get users with their registration data
   const getUsersWithRegistrations = () => {
     const allRegistrations = getAllRegistrations();
+    
+    if (!users || !Array.isArray(users)) {
+      return [];
+    }
     
     return users.map(user => ({
       ...user,
       registrations: allRegistrations.filter(reg => 
         reg.userId === user.id || reg.email === user.email
       ),
-      // Calculate attendance stats
       presentCount: allRegistrations.filter(reg => 
         (reg.userId === user.id || reg.email === user.email) && reg.attendance === 'present'
       ).length,
@@ -209,23 +268,20 @@ export default function Userspenalties({ currentUser, onLogout }) {
     }));
   };
 
-  // Filter users based on grouping and search
   const getFilteredUsers = () => {
     const usersWithRegistrations = getUsersWithRegistrations();
     
     let filtered = usersWithRegistrations;
 
-    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (user.barangay && user.barangay.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (user.purok && user.purok.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Apply group filter
     switch (groupBy) {
       case 'restricted':
         filtered = filtered.filter(u => u.penalties >= 3);
@@ -245,14 +301,12 @@ export default function Userspenalties({ currentUser, onLogout }) {
         }
         break;
       default:
-        // All users
         break;
     }
 
     return filtered;
   };
 
-  // Get users grouped by barangay for statistics
   const getUsersByBarangay = () => {
     const usersWithRegistrations = getUsersWithRegistrations();
     const barangayStats = {};
@@ -267,12 +321,10 @@ export default function Userspenalties({ currentUser, onLogout }) {
   const filteredUsers = getFilteredUsers();
   const barangayStats = getUsersByBarangay();
 
-  // Close mobile menu when clicking on a link
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
 
-  // Add penalty with SweetAlert
   const handleAddPenalty = async (id) => {
     try {
       const user = users.find(u => u.id === id);
@@ -318,7 +370,6 @@ export default function Userspenalties({ currentUser, onLogout }) {
     }
   };
 
-  // Decrease penalty with SweetAlert
   const handleDecreasePenalty = async (id) => {
     try {
       const user = users.find(u => u.id === id);
@@ -381,24 +432,9 @@ export default function Userspenalties({ currentUser, onLogout }) {
     if (result.isConfirmed) {
       try {
         await api.post('/logout');
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('token');
-        onLogout();
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'Logged Out!',
-          text: 'You have been successfully logged out.',
-          confirmButtonText: 'OK',
-          timer: 2000,
-          background: '#1e1e1e',
-          color: 'white'
-        }).then(() => {
-          window.location.href = "/";
-        });
-        
       } catch (error) {
-        console.error("Logout failed:", error);
+        console.error("Logout API call failed:", error);
+      } finally {
         localStorage.removeItem('currentUser');
         localStorage.removeItem('token');
         onLogout();
@@ -407,8 +443,11 @@ export default function Userspenalties({ currentUser, onLogout }) {
     }
   };
 
-  // Calculate user statistics
   const getUserStats = () => {
+    if (!users || !Array.isArray(users)) {
+      return { totalUsers: 0, usersWithPenalties: 0, restrictedUsers: 0, cleanUsers: 0 };
+    }
+    
     const totalUsers = users.filter(u => u.role === "user").length;
     const usersWithPenalties = users.filter(u => u.role === "user" && u.penalties > 0 && u.penalties < 3).length;
     const restrictedUsers = users.filter(u => u.role === "user" && u.penalties >= 3).length;
@@ -419,7 +458,6 @@ export default function Userspenalties({ currentUser, onLogout }) {
 
   const userStats = getUserStats();
 
-  // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -429,7 +467,6 @@ export default function Userspenalties({ currentUser, onLogout }) {
     });
   };
 
-  // Format time for display
   const formatTime = (timeString) => {
     if (!timeString) return '';
     return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
@@ -439,24 +476,24 @@ export default function Userspenalties({ currentUser, onLogout }) {
     });
   };
 
-  // Get available puroks for selected barangay
   const getAvailablePuroks = () => {
     if (!selectedBarangay) return [];
     return barangaysWithPuroks[selectedBarangay] || [];
   };
 
-  // Reset purok when barangay changes
   useEffect(() => {
     setSelectedPurok('');
   }, [selectedBarangay]);
 
-  // Add loading and error states at the beginning of return
   if (loading) {
     return (
       <div className="penalty-page">
         <div className="loading">
           <div className="loading-spinner"></div>
           <p>Loading users and penalties data...</p>
+          <button onClick={() => setLoading(false)} style={{marginTop: '10px'}}>
+            Cancel Loading
+          </button>
         </div>
       </div>
     );
@@ -469,6 +506,9 @@ export default function Userspenalties({ currentUser, onLogout }) {
           <h2>Error Loading Page</h2>
           <p>{error}</p>
           <button onClick={fetchAllData}>Retry</button>
+          <button onClick={() => setError(null)} style={{marginLeft: '10px'}}>
+            Continue Anyway
+          </button>
         </div>
       </div>
     );
@@ -495,13 +535,20 @@ export default function Userspenalties({ currentUser, onLogout }) {
         >
           ☰
         </button>
-        <h3 className="title">EventHub</h3>
-         <button className="logout-btn" onClick={handleLogout}>
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
-    <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-  </svg>
-  <span className="logout-text">Logout</span>
-</button>
+         <div className="logo-title-container">
+    <img 
+      src="/images/logo.jpg" 
+      alt="EventHub Logo" 
+      className="topbar-logo"
+    />
+    <h3 className="title">EventHub</h3>
+  </div>
+        <button className="logout-btn" onClick={handleLogout}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
+            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+          </svg>
+          <span className="logout-text">Logout</span>
+        </button>
       </div>
 
       <div className={`penalty-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -523,11 +570,14 @@ export default function Userspenalties({ currentUser, onLogout }) {
       )}
 
       <div className="penalty-content">
-        {/* Search and Filter Section */}
         <div className="search-filter-section">
           <div className="search-header">
             <h2>User Management</h2>
             <p>Manage user penalties and monitor attendance status</p>
+            <div className="data-status">
+              <span>Users loaded: {users.length}</span>
+              <span>Events loaded: {events.length}</span>
+            </div>
           </div>
           
           <div className="search-box">
@@ -599,47 +649,6 @@ export default function Userspenalties({ currentUser, onLogout }) {
           </div>
         </div>
 
-        {/* Barangay Statistics */}
-        {groupBy === 'barangay' && !selectedBarangay && (
-          <div className="penalty-section">
-            <div className="section-header">
-              <h2>🏘️ Barangay Statistics</h2>
-              <p>Click on a barangay to view its users</p>
-            </div>
-            <div className="barangay-stats-grid">
-              {barangays.map(barangay => {
-                const barangayUsers = barangayStats[barangay] || [];
-                const totalUsers = barangayUsers.length;
-                const restrictedUsers = barangayUsers.filter(u => u.penalties >= 3).length;
-                
-                if (totalUsers === 0) return null;
-                
-                return (
-                  <div key={barangay} className="barangay-stat-card">
-                    <h4>{barangay}</h4>
-                    <div className="barangay-numbers">
-                      <div className="barangay-total">{totalUsers} users</div>
-                      {restrictedUsers > 0 && (
-                        <div className="barangay-restricted">{restrictedUsers} restricted</div>
-                      )}
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setSelectedBarangay(barangay);
-                        setGroupBy('barangay');
-                      }}
-                      className="view-barangay-btn"
-                    >
-                      👁️ View Users
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Users Table */}
         <div className="penalty-section">
           <div className="section-header">
             <h2>
@@ -664,31 +673,27 @@ export default function Userspenalties({ currentUser, onLogout }) {
                   <th>Email</th>
                   <th>Barangay</th>
                   <th>Purok</th>
-                  <th>Present</th>
-                  <th>Absent</th>
-                  <th>Pending</th>
-                  <th>Total</th>
                   <th>Penalties</th>
+                  <th>Ban Duration</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length > 0 ? (
+                {filteredUsers && filteredUsers.length > 0 ? (
                   filteredUsers
                     .filter((u) => u.role === "user")
                     .map((u) => {
-                      const totalEvents = u.registrations.length;
+                      const totalEvents = u.registrations ? u.registrations.length : 0;
+                      const isBanned = u.penalties >= 3;
+                      const banDays = u.banned_until ? Math.ceil((new Date(u.banned_until) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+                      const isCurrentlyBanned = u.banned_until && new Date(u.banned_until) > new Date();
 
                       return (
-                        <tr key={u.id} className="user-row">
-                          <td 
-                            className="user-name"
-                            onClick={() => showUserAttendanceDetails(u)} 
-                          >
+                        <tr key={u.id} className="user-row" onClick={() => showUserAttendanceDetails(u)}>
+                          <td className="user-name">
                             <div className="name-wrapper">
                               <span className="name">{u.name}</span>
-                              <span className="click-hint">👁️ View</span>
                             </div>
                           </td>
                           <td className="user-email">{u.email}</td>
@@ -702,31 +707,35 @@ export default function Userspenalties({ currentUser, onLogout }) {
                               {u.purok || 'Not specified'}
                             </span>
                           </td>
-                          <td className="attendance-present">
-                            <div className="attendance-count">{u.presentCount}</div>
-                            <div className="attendance-label">Present</div>
-                          </td>
-                          <td className="attendance-absent">
-                            <div className="attendance-count">{u.absentCount}</div>
-                            <div className="attendance-label">Absent</div>
-                          </td>
-                          <td className="attendance-pending">
-                            <div className="attendance-count">{u.pendingCount}</div>
-                            <div className="attendance-label">Pending</div>
-                          </td>
-                          <td className="attendance-total">
-                            <div className="attendance-count">{totalEvents}</div>
-                            <div className="attendance-label">Total</div>
-                          </td>
+                        
+                         
                           <td className={
                             u.penalties >= 3 ? "penalty-high" :
                             u.penalties > 0 ? "penalty-warning" : "penalty-none"
                           }>
-                            {u.penalties}
+                            {u.penalties || 0}
+                          </td>
+                          <td className="ban-duration">
+                            {isCurrentlyBanned ? (
+                              <div className="ban-info">
+                                <div className="ban-days">{banDays} days left</div>
+                                <div className="ban-date">Until {formatDate(u.banned_until)}</div>
+                              </div>
+                            ) : isBanned ? (
+                              <div className="ban-expired">
+                                Ban expired
+                              </div>
+                            ) : (
+                              <div className="no-ban">
+                                No ban
+                              </div>
+                            )}
                           </td>
                           <td>
-                            {u.penalties >= 3 ? (
-                              <span className="status-banned">🚫 Restricted</span>
+                            {isCurrentlyBanned ? (
+                              <span className="status-banned">🚫 Banned</span>
+                            ) : u.penalties >= 3 ? (
+                              <span className="status-restricted">⚠️ Restricted</span>
                             ) : u.penalties > 0 ? (
                               <span className="status-warning">⚠️ Warning</span>
                             ) : (
@@ -736,7 +745,10 @@ export default function Userspenalties({ currentUser, onLogout }) {
                           <td className="action-buttons">
                             <button
                               className="add-penalty-btn"
-                              onClick={() => handleAddPenalty(u.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddPenalty(u.id);
+                              }}
                               disabled={u.penalties >= 3}
                               title="Add penalty"
                             >
@@ -744,7 +756,10 @@ export default function Userspenalties({ currentUser, onLogout }) {
                             </button>
                             <button
                               className="remove-penalty-btn"
-                              onClick={() => handleDecreasePenalty(u.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDecreasePenalty(u.id);
+                              }}
                               disabled={u.penalties <= 0}
                               title="Remove penalty"
                             >
@@ -756,7 +771,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
                     })
                 ) : (
                   <tr>
-                    <td colSpan="11" className="no-data">
+                    <td colSpan="12" className="no-data">
                       <div className="no-data-content">
                         <div className="no-data-icon">📭</div>
                         <p>No users found in this category</p>
@@ -768,6 +783,13 @@ export default function Userspenalties({ currentUser, onLogout }) {
                             Clear Search
                           </button>
                         )}
+                        <button 
+                          className="clear-search-btn"
+                          onClick={fetchAllData}
+                          style={{marginTop: '10px'}}
+                        >
+                          Refresh Data
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -778,18 +800,36 @@ export default function Userspenalties({ currentUser, onLogout }) {
         </div>
       </div>
 
-      {/* Attendance Overview Modal */}
       {showAttendanceModal && selectedUser && (
         <div className="modal-overlay" onClick={() => setShowAttendanceModal(false)}>
           <div className="modal-content large-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>
-                📊 Attendance Overview: {selectedUser.name}
+                📊 Attendance Overview
               </h2>
               <button className="close-btn" onClick={() => setShowAttendanceModal(false)}>×</button>
             </div>
             
             <div className="modal-body">
+              <div className="user-details-header">
+                <div className="user-basic-info">
+                  <h3>{selectedUser.name}</h3>
+                  <p>{selectedUser.email}</p>
+                  <p>{selectedUser.barangay} • {selectedUser.purok}</p>
+                </div>
+                <div className="user-penalty-info">
+                  <div className={`penalty-status ${selectedUser.penalties >= 3 ? 'banned' : selectedUser.penalties > 0 ? 'warning' : 'clean'}`}>
+                    <strong>Penalties: {selectedUser.penalties || 0}/3</strong>
+                  </div>
+                  {selectedUser.banned_until && new Date(selectedUser.banned_until) > new Date() && (
+                    <div className="ban-details">
+                      <strong>🚫 Banned for {Math.ceil((new Date(selectedUser.banned_until) - new Date()) / (1000 * 60 * 60 * 24))} more days</strong>
+                      <p>Until: {formatDate(selectedUser.banned_until)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="attendance-summary">
                 <div className="summary-cards">
                   <div className="summary-card present">
@@ -809,7 +849,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
                   </div>
                   <div className="summary-card total">
                     <h4>📋 Total</h4>
-                    <div className="summary-count">{selectedUser.registrations?.length || 0}</div>
+                    <div className="summary-count">{selectedUser.registrations ? selectedUser.registrations.length : 0}</div>
                     <p>All registrations</p>
                   </div>
                 </div>
@@ -840,7 +880,9 @@ export default function Userspenalties({ currentUser, onLogout }) {
                             </td>
                             <td>
                               <span className={`attendance-status ${reg.attendance}`}>
-                                {reg.attendance || 'pending'}
+                                {reg.attendance === 'present' ? '✅ Present' : 
+                                 reg.attendance === 'absent' ? '❌ Absent' : 
+                                 '⏳ Pending'}
                               </span>
                             </td>
                           </tr>

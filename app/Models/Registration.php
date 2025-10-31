@@ -14,6 +14,7 @@ class Registration extends Model
         'name', 
         'email',
         'attendance',
+         'attendance_marked_at',
         'user_id',
         'status', // Add this
         'cancellation_reason', // Add this
@@ -21,6 +22,7 @@ class Registration extends Model
     ];
 
     protected $casts = [
+         'attendance_marked_at' => 'datetime',
         'cancelled_at' => 'datetime', // Add this
     ];
 

@@ -17,39 +17,42 @@ use App\Mail\PasswordResetMail;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'username' => 'required|string|max:255|unique:users',
-            'contactNo' => 'nullable|string|max:20',
-            'sex' => 'nullable|string|max:10',
-            'dob' => 'nullable|date',
-            'barangay' => 'nullable|string|max:255',
-            'purok' => 'nullable|string|max:255',
-            'password' => 'required|string|min:5',
-        ]);
+  public function register(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
+        'username' => 'required|string|max:255|unique:users',
+        'contactNo' => 'nullable|string|max:20',
+        'sex' => 'nullable|string|max:10',
+        'dob' => 'nullable|date',
+        'barangay' => 'nullable|string|max:255',
+        'purok' => 'nullable|string|max:255',
+        'password' => 'required|string|min:5',
+    ]);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'username' => $validated['username'],
-            'contactNo' => $validated['contactNo'] ?? null,
-            'sex' => $validated['sex'] ?? null,
-            'dob' => $validated['dob'] ?? null,
-            'barangay' => $validated['barangay'] ?? null,
-            'purok' => $validated['purok'] ?? null,
-            'password' => Hash::make($validated['password']),
-        ]);
+    $user = User::create([
+        'name' => $validated['name'],
+        'email' => $validated['email'],
+        'username' => $validated['username'],
+        'contactNo' => $validated['contactNo'] ?? null,
+        'sex' => $validated['sex'] ?? null,
+        'dob' => $validated['dob'] ?? null,
+        'barangay' => $validated['barangay'] ?? null,
+        'purok' => $validated['purok'] ?? null,
+        'password' => Hash::make($validated['password']),
+        'role' => 'user', 
+        'penalties' => 0, 
+    ]);
 
-        return response()->json([
-            'message' => 'Registration successful!',
-            'user' => $user
-        ], 201);
-    }
+    return response()->json([
+        'message' => 'Registration successful!',
+        'user' => $user
+    ], 201);
+}
 
-   public function login(Request $request)
+
+  public function login(Request $request)
 {
     $validated = $request->validate([
         'email' => 'required|string|email',
@@ -62,14 +65,24 @@ class AuthController extends Controller
         return response()->json(['message' => 'Invalid email or password'], 401);
     }
 
-    // ✅ Use Sanctum token instead of session
+    // ✅ Enhanced debug logging using your custom methods
+    Log::info('User login attempt', [
+        'user_id' => $user->id,
+        'email' => $user->email,
+        'role' => $user->role,
+        'isAdmin_method' => $user->isAdmin() ? 'YES' : 'NO',
+        'is_banned' => $user->isBanned() ? 'YES' : 'NO',
+        'penalties' => $user->penalties
+    ]);
+
+    // ✅ Use Sanctum token
     $token = $user->createToken('auth-token')->plainTextToken;
 
     return response()->json([
         'message' => 'Login successful',
         'user' => $user,
-        'token' => $token, // Add this line
-        'redirect' => $user->role === 'admin' ? '/admin-dashboard' : '/user-dashboard'
+        'token' => $token,
+        'redirect' => $user->isAdmin() ? '/admin-dashboard' : '/user-dashboard'
     ]);
 }
 

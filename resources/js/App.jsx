@@ -19,7 +19,7 @@ import EventsParticipate from "./user/EventsParticipate";
 import Upcomingevents from "./user/Upcomingevents";
 import Profile from "./user/Profile";
 import Notifications from "./user/Notifications";
-import Eventdetails from "./user/Eventdetails";
+
 
 
 class ErrorBoundary extends React.Component {
@@ -369,17 +369,7 @@ const AppContent = ({ currentUser, events, setEvents, handleLogout, setCurrentUs
         } 
       />
 
-      <Route path="/events/:id" element={
-        currentUser ? (
-          currentUser.role === "user" ? (
-            <Eventdetails currentUser={currentUser} />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        ) : (
-          <Navigate to="/" replace />
-        )
-      } />
+     
     </Routes>
   );
 };
