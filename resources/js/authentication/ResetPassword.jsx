@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from 'react-toastify';
-import "./authentication-css/login.css";
+import "./authentication-css/password-reset.css";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -56,22 +56,15 @@ export default function ResetPassword() {
 
   if (!email) {
     return (
-      <div className="login-container">
-        <h1 className="login-title">DAGOHOY EVENTHUB</h1>
-        <div className="error-message">
-          <h3>Reset Password</h3>
-          <p>Please enter your email and the reset code from your email.</p>
-          <div style={{marginTop: '20px'}}>
-            <input
-              className="login-input"
-              type="email"
-              placeholder="Enter your email"
-              value={email || ""}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <Link to="/forgot-password" className="login-link">
-            Request New Reset Code
+      <div className="password-reset-container">
+        <h1 className="password-reset-title">DAGOHOY EVENTHUB</h1>
+        <div className="password-error-message">
+          <h3 className="password-error-title">Reset Password</h3>
+          <p className="password-reset-instructions">
+            Please request a password reset code first.
+          </p>
+          <Link to="/forgot-password" className="password-reset-link">
+            Request Reset Code
           </Link>
         </div>
       </div>
@@ -80,77 +73,92 @@ export default function ResetPassword() {
 
   if (resetSuccess) {
     return (
-      <div className="login-container">
-        <h1 className="login-title">DAGOHOY EVENTHUB</h1>
-        <div className="email-sent-message">
-          <div className="success-icon">✓</div>
-          <h3>Password Reset Successful</h3>
-          <p>Your password has been reset successfully.</p>
-          <Link to="/login" className="login-link">
-            Proceed to Login
-          </Link>
+      <div className="password-reset-container">
+        <h1 className="password-reset-title">DAGOHOY EVENTHUB</h1>
+        <div className="password-success-message">
+          <div className="password-success-icon">✓</div>
+          <h3 className="password-success-title">Password Reset Successful</h3>
+          <p className="password-success-text">
+            Your password has been reset successfully. You can now login with your new password.
+          </p>
+          <div style={{ marginTop: '25px' }}>
+            <Link to="/" className="password-reset-btn" style={{ display: 'inline-block', textDecoration: 'none' }}>
+              Proceed to Login
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="login-container">
-      <h1 className="login-title">DAGOHOY EVENTHUB</h1>
-      <p className="login-txt">Reset Your Password</p>
+    <div className="password-reset-container">
+      <h1 className="password-reset-title">DAGOHOY EVENTHUB</h1>
+      <p className="password-reset-subtitle">Reset Your Password</p>
       
-      <form className="login-form" onSubmit={handleResetPassword}>
-        <p className="forgot-password-instructions">
-          Enter the reset code from your email and your new password for <strong>{email}</strong>
+      <form className="password-reset-form" onSubmit={handleResetPassword}>
+        <p className="password-reset-instructions">
+          Enter the reset code from your email and your new password for:
         </p>
+        <div className="password-success-email" style={{ marginBottom: '20px' }}>
+          {email}
+        </div>
         
         <input
-          className="login-input"
+          className="password-reset-input"
           type="text"
-          placeholder="Enter reset code from email"
+          placeholder="Enter 6-digit reset code"
           value={resetToken}
           onChange={(e) => setResetToken(e.target.value)}
           required
           disabled={loading}
+          maxLength="6"
         />
         
         <input
-          className="login-input"
+          className="password-reset-input"
           type="password"
-          placeholder="New Password"
+          placeholder="Enter new password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength="5"
+          minLength="6"
           disabled={loading}
         />
         
         <input
-          className="login-input"
+          className="password-reset-input"
           type="password"
-          placeholder="Confirm New Password"
+          placeholder="Confirm new password"
           value={passwordConfirmation}
           onChange={(e) => setPasswordConfirmation(e.target.value)}
           required
-          minLength="5"
+          minLength="6"
           disabled={loading}
         />
         
         <button 
-          className="login-btn" 
+          className="password-reset-btn" 
           type="submit"
           disabled={loading}
         >
-          {loading ? "Resetting..." : "Reset Password"}
+          {loading ? (
+            <>
+              <div className="password-loading-spinner"></div>
+              Resetting Password...
+            </>
+          ) : (
+            'Reset Password'
+          )}
         </button>
       </form>
       
-      <p className="login-text">
-        Remember your password? <Link className="login-link" to="/">Login</Link> here
+      <p className="password-reset-text">
+        Remember your password? <Link className="password-reset-link" to="/">Login here</Link>
       </p>
       
-      <p className="login-text">
-        Need a new reset code? <Link className="login-link" to="/forgot-password">Request New Code</Link>
+      <p className="password-reset-text">
+        Need a new reset code? <Link className="password-reset-link" to="/forgot-password">Request New Code</Link>
       </p>
     </div>
   );

@@ -32,6 +32,24 @@ export default function Notifications({ currentUser }) {
            localStorage.getItem('auth_token');
   };
 
+  // Helper function to truncate long text
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  // Helper function to break long words
+  const breakLongWords = (text, maxWordLength = 20) => {
+    if (!text) return '';
+    return text.split(' ').map(word => {
+      if (word.length > maxWordLength) {
+        return word.match(new RegExp(`.{1,${maxWordLength}}`, 'g')).join(' ');
+      }
+      return word;
+    }).join(' ');
+  };
+
   const loadNotifications = async (showToast = false) => {
     try {
       if (showToast) setRefreshing(true);
@@ -417,7 +435,7 @@ export default function Notifications({ currentUser }) {
             {MaterialIcons.ArrowBack}
           </button>
           <div className="mui-detail-title">
-            <h2>{selectedNotification.title}</h2>
+            <h2 className="mui-text-wrap">{selectedNotification.title}</h2>
             <p className="mui-detail-time">
               {formatRelativeTime(selectedNotification.created_at)}
             </p>
@@ -445,7 +463,7 @@ export default function Notifications({ currentUser }) {
               <span className="mui-time">{formatRelativeTime(selectedNotification.created_at)}</span>
             </div>
             <div className="mui-message-body">
-              <p>{selectedNotification.message}</p>
+              <p className="mui-text-wrap">{selectedNotification.message}</p>
             </div>
           </div>
 
@@ -455,22 +473,24 @@ export default function Notifications({ currentUser }) {
               <div className="mui-event-info">
                 <div className="mui-event-field">
                   <strong>Event:</strong>
-                  <span>{selectedNotification.event.title}</span>
+                  <span className="mui-text-wrap">{selectedNotification.event.title}</span>
                 </div>
                 <div className="mui-event-field">
                   <strong>Date & Time:</strong>
-                  <span>{formatEventDateTime(selectedNotification.event)}</span>
+                  <span className="mui-text-wrap">{formatEventDateTime(selectedNotification.event)}</span>
                 </div>
                 {selectedNotification.event.location && (
                   <div className="mui-event-field">
                     <strong>Location:</strong>
-                    <span>{selectedNotification.event.location}</span>
+                    <span className="mui-text-wrap">{selectedNotification.event.location}</span>
                   </div>
                 )}
                 {selectedNotification.event.description && (
                   <div className="mui-event-field">
                     <strong>Description:</strong>
-                    <span>{selectedNotification.event.description}</span>
+                    <span className="mui-text-wrap mui-description">
+                      {breakLongWords(selectedNotification.event.description)}
+                    </span>
                   </div>
                 )}
               </div>
@@ -543,10 +563,14 @@ export default function Notifications({ currentUser }) {
               </div>
               <div className="mui-list-item-content">
                 <div className="mui-list-item-header">
-                  <h4 className="mui-list-item-title">{notification.title}</h4>
+                  <h4 className="mui-list-item-title mui-text-ellipsis" title={notification.title}>
+                    {truncateText(notification.title, 60)}
+                  </h4>
                   <span className="mui-list-item-time">{formatRelativeTime(notification.created_at)}</span>
                 </div>
-                <p className="mui-list-item-message">{notification.message}</p>
+                <p className="mui-list-item-message mui-text-ellipsis" title={notification.message}>
+                  {truncateText(notification.message, 80)}
+                </p>
                 <div className="mui-list-item-meta">
                   {notification.event_id && (
                     <span className="mui-event-tag">

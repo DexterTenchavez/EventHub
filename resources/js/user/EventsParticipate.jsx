@@ -6,11 +6,61 @@ import { useEffect, useState } from "react";
 export default function EventsParticipate({ events = [], currentUser, onLogout }) {
   const [participationHistory, setParticipationHistory] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedCards, setExpandedCards] = useState({});
   const [notificationCount, setNotificationCount] = useState(0);
+  const [expandedTitles, setExpandedTitles] = useState({});
 
-  const toggleExpand = (eventId) => {
-    setExpandedCards(prev => ({
+  // Category images mapping
+  const categoryImages = {
+    "Barangay Assembly": "/images/barangay_asssembly.jpg",
+    "Medical Mission": "/images/Medical_mission.jpg",
+    "Vaccination Drive": "/images/Vaccination.jpg",
+    "Farming Seminar": "/images/Farmer_seminar.jpg",
+    "Town Fiesta": "/images/Town_fiesta.jpg",
+    "Sports Tournament": "/images/SportsFestival.jpg",
+    "Educational Seminar": "/images/Education_seminar.jpg",
+    "Civil Registration": "/images/civil_reg.jpg",
+    "Voters Registration": "/images/Voter_reg.jpg",
+    "Clean-up Drive": "/images/cleanup.jpg",
+    "Wedding": "/images/wedding.jpg",
+    "Tree Planting": "/images/treep_planting.jpg",
+    "Dental Mission": "/images/dentalhealth.jpg",
+    "Nutrition Program": "/images/nutrition.jpg",
+    "TESDA Training": "/images/tesda courses.jpg",
+    "Palarong Barangay": "/images/palarong_barangay.jpg",
+    "4Ps Payout": "/images/4ps.jpg",
+    "Christmas Party": "/images/christmas.jpg",
+   "Other": "/images/other.jpg",
+  };
+
+  const getCategoryImage = (category) => {
+    // If no category provided, use default
+    if (!category) {
+      return "/images/other.jpg";
+    }
+    
+    // Direct match
+    if (categoryImages[category]) {
+      return categoryImages[category];
+    }
+    
+    // Check if it's one of the predefined categories (case insensitive)
+    const normalizedCategory = category.toLowerCase();
+    const predefinedCategory = Object.keys(categoryImages).find(
+      key => key.toLowerCase() === normalizedCategory
+    );
+    
+    if (predefinedCategory) {
+      return categoryImages[predefinedCategory];
+    }
+    
+    // Default to "Other" image for any custom categories
+    return categoryImages["Other"] || "/images/other.jpg";
+  };
+
+
+  // Toggle title expansion
+  const toggleTitleExpansion = (eventId) => {
+    setExpandedTitles(prev => ({
       ...prev,
       [eventId]: !prev[eventId]
     }));
@@ -119,13 +169,13 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           ☰
         </button>
         <div className="logo-title-container">
-    <img 
-      src="/images/logo.jpg" 
-      alt="EventHub Logo" 
-      className="topbar-logo"
-    />
-    <h3 className="title">EventHub</h3>
-  </div>
+          <img 
+            src="/images/logo.jpg" 
+            alt="EventHub Logo" 
+            className="topbar-logo"
+          />
+          <h3 className="title">EventHub</h3>
+        </div>
         <div className="topbar-right">
           <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
             <span className="notification-icon">🔔</span>
@@ -135,7 +185,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           </Link>
           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
             <span className="profile-icon">👤</span>
-            Profile
+          
           </Link>
         </div>
       </div>
@@ -145,7 +195,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           <li><Link to="/user-dashboard" onClick={handleNavClick}>🏠 Home</Link></li>
           <li><Link to="/upcoming-events" onClick={handleNavClick}>📅 Upcoming Events</Link></li>
           <li className="user-currentpage"><Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link></li>
-          
         </ul>
       </div>
 
@@ -196,50 +245,72 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
             </div>
 
             <div className="history-list">
-              {participationHistory.map((item) => (
-                <div key={item.eventId} className="participation-card">
-                  <div className="card-header">
-                    <h3>{item.eventTitle}</h3>
-                    {getAttendanceBadge(item.attendance)}
-                  </div>
-                  
-                  <div className="card-content">
-                    <p><strong>Category:</strong> {item.eventCategory}</p>
-                    <p><strong>Date:</strong> {new Date(item.eventDate).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}</p>
-                    <p><strong>Location:</strong> {item.eventLocation}</p>
-                    <p className="event-description">
-                      <strong>Description:</strong> 
-                      <span className={`description-text ${expandedCards[item.eventId] ? 'expanded' : 'collapsed'}`}>
-                        {item.eventDescription}
-                      </span>
-                      {item.eventDescription.length > 100 && (
-                        <button 
-                          className="read-more-btn"
-                          onClick={() => toggleExpand(item.eventId)}
-                        >
-                          {expandedCards[item.eventId] ? 'Show Less' : 'Read More'}
-                        </button>
-                      )}
-                    </p>
+              {participationHistory.map((item) => {
+                const categoryImage = getCategoryImage(item.eventCategory);
+                const isTitleExpanded = expandedTitles[item.eventId];
+                const needsSeeMore = item.eventTitle.length > 50;
+                
+                return (
+                  <div key={item.eventId} className="participation-card">
+                    {/* Event Image */}
+                    <div 
+                      className="event-card-image"
+                      style={{
+                        backgroundImage: `url(${categoryImage})`
+                      }}
+                    ></div>
                     
-                    <div className="participation-details">
-                      <p><strong>Your Status:</strong> 
-                        <span style={{ color: getAttendanceColor(item.attendance), fontWeight: 'bold', marginLeft: '8px' }}>
-                          {item.attendance.charAt(0).toUpperCase() + item.attendance.slice(1)}
-                        </span>
-                      </p>
+                    <div className="event-card-content">
+                      <div className="card-header">
+                        {/* Event Title with See More functionality */}
+                        <div className="event-card-title-container">
+                          <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
+                            {item.eventTitle}
+                          </h3>
+                          {needsSeeMore && (
+                            <button
+                              className="see-more-btn"
+                              onClick={() => toggleTitleExpansion(item.eventId)}
+                            >
+                              {isTitleExpanded ? 'See Less' : 'See More'}
+                            </button>
+                          )}
+                        </div>
+                        {getAttendanceBadge(item.attendance)}
+                      </div>
                       
-                      {item.registeredAt && (
-                        <p><strong>Registered On:</strong> {new Date(item.registeredAt).toLocaleDateString()}</p>
-                      )}
+                      <div className="card-details">
+                        <p><strong>Category:</strong> {item.eventCategory}</p>
+                        <p><strong>Date:</strong> {new Date(item.eventDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}</p>
+                        <p><strong>Location:</strong> {item.eventLocation}</p>
+                        
+                        <div className="event-description-container">
+                          <div className="event-description-label">Description:</div>
+                          <div className="event-description-scroll">
+                            <p className="event-description-text">{item.eventDescription}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="participation-details">
+                          <p><strong>Your Status:</strong> 
+                            <span style={{ color: getAttendanceColor(item.attendance), fontWeight: 'bold', marginLeft: '8px' }}>
+                              {item.attendance.charAt(0).toUpperCase() + item.attendance.slice(1)}
+                            </span>
+                          </p>
+                          
+                          {item.registeredAt && (
+                            <p><strong>Registered On:</strong> {new Date(item.registeredAt).toLocaleDateString()}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

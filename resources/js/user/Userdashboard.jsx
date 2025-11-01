@@ -9,14 +9,72 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [notificationCount, setNotificationCount] = useState(0);
   const [lastActionTime, setLastActionTime] = useState(0);
   const [actionCount, setActionCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState(""); // NEW: Search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedTitles, setExpandedTitles] = useState({});
+
+  // Category images mapping
+  const categoryImages = {
+    "Barangay Assembly": "/images/barangay_asssembly.jpg",
+    "Medical Mission": "/images/Medical_mission.jpg",
+    "Vaccination Drive": "/images/Vaccination.jpg",
+    "Farming Seminar": "/images/Farmer_seminar.jpg",
+    "Town Fiesta": "/images/Town_fiesta.jpg",
+    "Sports Tournament": "/images/SportsFestival.jpg",
+    "Educational Seminar": "/images/Education_seminar.jpg",
+    "Civil Registration": "/images/civil_reg.jpg",
+    "Voters Registration": "/images/Voter_reg.jpg",
+    "Clean-up Drive": "/images/cleanup.jpg",
+    "Wedding": "/images/wedding.jpg",
+    "Tree Planting": "/images/treep_planting.jpg",
+    "Dental Mission": "/images/dentalhealth.jpg",
+    "Nutrition Program": "/images/nutrition.jpg",
+    "TESDA Training": "/images/tesda courses.jpg",
+    "Palarong Barangay": "/images/palarong_barangay.jpg",
+    "4Ps Payout": "/images/4ps.jpg",
+    "Christmas Party": "/images/christmas.jpg",
+    "Other": "/images/other.jpg",
+  };
+
+  const getCategoryImage = (category) => {
+    // If no category provided, use default
+    if (!category) {
+      return "/images/other.jpg";
+    }
+    
+    // Direct match
+    if (categoryImages[category]) {
+      return categoryImages[category];
+    }
+    
+    // Check if it's one of the predefined categories (case insensitive)
+    const normalizedCategory = category.toLowerCase();
+    const predefinedCategory = Object.keys(categoryImages).find(
+      key => key.toLowerCase() === normalizedCategory
+    );
+    
+    if (predefinedCategory) {
+      return categoryImages[predefinedCategory];
+    }
+    
+    // Default to "Other" image for any custom categories
+    return categoryImages["Other"] || "/images/other.jpg";
+  };
+
+
+  // Toggle title expansion
+  const toggleTitleExpansion = (eventId) => {
+    setExpandedTitles(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
 
   // Rate limiting: max 5 actions per minute
   const canPerformAction = () => {
     const now = Date.now();
     const timeDiff = now - lastActionTime;
     
-    if (timeDiff > 60000) { // Reset counter after 1 minute
+    if (timeDiff > 60000) {
       setActionCount(0);
       setLastActionTime(now);
       return true;
@@ -82,7 +140,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     setMobileMenuOpen(false);
   };
 
-  // NEW: Group events by barangay with search filter
   const groupEventsByBarangay = () => {
     const filteredEvents = events.filter(event => 
       event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,7 +163,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
 
   if (!currentUser) return <p>Loading...</p>;
 
-  // Add the missing getEventStatus function
   const getEventStatus = (event) => {
     const now = new Date();
     const eventDate = new Date(event.date);
@@ -162,7 +218,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     }
   };
 
-  // Add the missing helper functions
   const formatTimeDisplay = (timeValue) => {
     if (!timeValue) return 'Time not set';
     
@@ -273,61 +328,59 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     });
   };
 
- const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
-  if (!canPerformAction()) return;
+  const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
+    if (!canPerformAction()) return;
 
-  try {
-    const token = localStorage.getItem('token');
-    const event = events.find((e) => e.id === eventId);
-    const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
+    try {
+      const token = localStorage.getItem('token');
+      const event = events.find((e) => e.id === eventId);
+      const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
 
-    let res;
-    if (isRegistered) {
-      res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
-        email: currentUser.email,
-        cancellation_reason: reasonType || cancellationReason
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      let res;
+      if (isRegistered) {
+        res = await axios.post(`http://localhost:8000/api/events/${eventId}/unregister`, { 
+          email: currentUser.email,
+          cancellation_reason: reasonType || cancellationReason
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      } else {
+        res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
+          name: currentUser.name,
+          email: currentUser.email,
+        }, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+
+      if (res.data.event) {
+        setEvents(prevEvents =>
+          prevEvents.map(ev =>
+            ev.id === eventId ? res.data.event : ev
+          )
+        );
+      } else {
+        const eventsRes = await axios.get("http://localhost:8000/api/events");
+        setEvents(eventsRes.data);
+      }
+
+      Swal.fire({
+        title: isRegistered ? 'Cancelled!' : 'Registered!',
+        text: isRegistered ? 'Registration cancelled.' : 'Successfully registered!',
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7'
       });
-    } else {
-      res = await axios.post(`http://localhost:8000/api/events/${eventId}/register`, {
-        name: currentUser.name,
-        email: currentUser.email,
-      }, {
-        headers: { 'Authorization': `Bearer ${token}` }
+
+    } catch (err) {
+      console.error('Error:', err.response?.data || err.message);
+      Swal.fire({
+        title: 'Error',
+        text: err.response?.data?.message || 'Operation failed',
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7'
       });
     }
-
-    // Update events state with the returned event data
-    if (res.data.event) {
-      setEvents(prevEvents =>
-        prevEvents.map(ev =>
-          ev.id === eventId ? res.data.event : ev
-        )
-      );
-    } else {
-      // Fallback: refresh all events
-      const eventsRes = await axios.get("http://localhost:8000/api/events");
-      setEvents(eventsRes.data);
-    }
-
-    Swal.fire({
-      title: isRegistered ? 'Cancelled!' : 'Registered!',
-      text: isRegistered ? 'Registration cancelled.' : 'Successfully registered!',
-      icon: 'success',
-      confirmButtonColor: '#4FC3F7'
-    });
-
-  } catch (err) {
-    console.error('Error:', err.response?.data || err.message);
-    Swal.fire({
-      title: 'Error',
-      text: err.response?.data?.message || 'Operation failed',
-      icon: 'error',
-      confirmButtonColor: '#4FC3F7'
-    });
-  }
-};
+  };
 
   const getReasonText = (reason, reasonType) => {
     const reasonMap = {
@@ -350,14 +403,14 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           ☰
         </button>
         
-         <div className="logo-title-container">
-    <img 
-      src="/images/logo.jpg" 
-      alt="EventHub Logo" 
-      className="topbar-logo"
-    />
-    <h3 className="title">EventHub</h3>
-  </div>
+        <div className="logo-title-container">
+          <img 
+            src="/images/logo.jpg" 
+            alt="EventHub Logo" 
+            className="topbar-logo"
+          />
+          <h3 className="title">EventHub</h3>
+        </div>
         <div className="topbar-right">
           <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
             <span className="notification-icon">🔔</span>
@@ -367,7 +420,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           </Link>
           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
             <span className="profile-icon">👤</span>
-            Profile
+           
           </Link>
         </div>
       </div>
@@ -396,7 +449,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       <div className="user-content">
         <h2>Available Events</h2>
 
-        {/* NEW: Search Bar */}
         <div className="search-container">
           <div className="search-box">
             <input
@@ -423,7 +475,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           </div>
         ) : (
           <div className="events-container">
-            {/* NEW: Group events by barangay */}
             {Object.keys(barangayGroups).map(barangay => (
               <div key={barangay} className="barangay-group">
                 <div className="barangay-header">
@@ -433,50 +484,77 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                   {barangayGroups[barangay].map(event => {
                     const status = getEventStatus(event);
                     const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
+                    const categoryImage = getCategoryImage(event.category);
+                    const isTitleExpanded = expandedTitles[event.id];
+                    const needsSeeMore = event.title.length > 50; // Show "See More" if title is long
 
                     return (
                       <div className="event-card" key={event.id}>
-                        <h3>{event.title}</h3>
-                        <p><strong>Category:</strong> {event.category}</p>
-                        <p><strong>Date & Time:</strong> {new Date(event.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })} at {getTimeRange(event)}</p>
-                        <p><strong>Location:</strong> {event.location}</p>
+                        {/* Event Image */}
+                        <div 
+                          className="event-card-image"
+                          style={{
+                            backgroundImage: `url(${categoryImage})`
+                          }}
+                        ></div>
                         
-                        <div className="event-description-container">
-                          <div className="event-description-label">Description:</div>
-                          <div className="event-description-scroll">
-                            <p className="event-description-text">{event.description}</p>
+                        <div className="event-card-content">
+                          {/* Event Title with See More functionality */}
+                          <div className="event-card-title-container">
+                            <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
+                              {event.title}
+                            </h3>
+                            {needsSeeMore && (
+                              <button
+                                className="see-more-btn"
+                                onClick={() => toggleTitleExpansion(event.id)}
+                              >
+                                {isTitleExpanded ? 'See Less' : 'See More'}
+                              </button>
+                            )}
                           </div>
-                        </div>
-                        
-                        <div className="event-card-footer">
-                          <p><strong>Status:</strong> 
-                            <span className={`status-badge ${status}`}>
-                              {status === "upcoming" ? "Upcoming" : 
-                               status === "present" ? "Started" : 
-                               "Past Event"}
-                            </span>
-                          </p>
+                          
+                          <p><strong>Category:</strong> {event.category}</p>
+                          <p><strong>Date & Time:</strong> {new Date(event.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })} at {getTimeRange(event)}</p>
+                          <p><strong>Location:</strong> {event.location}</p>
+                          
+                          <div className="event-description-container">
+                            <div className="event-description-label">Description:</div>
+                            <div className="event-description-scroll">
+                              <p className="event-description-text">{event.description}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="event-card-footer">
+                            <p><strong>Status:</strong> 
+                              <span className={`status-badge ${status}`}>
+                                {status === "upcoming" ? "Upcoming" : 
+                                 status === "present" ? "Started" : 
+                                 "Past Event"}
+                              </span>
+                            </p>
 
-                          {status === "upcoming" && (
-                            <button
-                              onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
-                              className={isRegistered ? "cancel-btn" : "register-btn"}
-                            >
-                              {isRegistered ? "Cancel Registration" : "Register Now"}
-                            </button>
-                          )}
+                            {status === "upcoming" && (
+                              <button
+                                onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
+                                className={isRegistered ? "cancel-btn" : "register-btn"}
+                              >
+                                {isRegistered ? "Cancel Registration" : "Register Now"}
+                              </button>
+                            )}
 
-                          {status === "present" && (
-                            <p className="present-event-message">Event is currently happening - Registration closed</p>
-                          )}
+                            {status === "present" && (
+                              <p className="present-event-message">Event is currently happening - Registration closed</p>
+                            )}
 
-                          {status === "past" && (
-                            <p className="past-event-message">This event has already passed</p>
-                          )}
+                            {status === "past" && (
+                              <p className="past-event-message">This event has already passed</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

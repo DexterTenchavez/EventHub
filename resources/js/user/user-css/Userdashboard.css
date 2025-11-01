@@ -10,6 +10,7 @@ body {
   margin: 0;
   padding: 0;
 }
+
 /* Logo and Title Styles */
 .logo-title-container {
   display: flex;
@@ -31,38 +32,6 @@ body {
   font-weight: bold;
   margin: 0;
 }
-
-/* Mobile responsive adjustments */
-@media (max-width: 768px) {
-  .logo-title-container {
-    gap: 8px;
-  }
-  
-  .topbar-logo {
-    height: 30px;
-    width: 30px;
-  }
-  
-  .user-topbar .title {
-    font-size: 18px;
-  }
-}
-
-@media (max-width: 480px) {
-  .logo-title-container {
-    gap: 6px;
-  }
-  
-  .topbar-logo {
-    height: 25px;
-    width: 25px;
-  }
-  
-  .user-topbar .title {
-    font-size: 16px;
-  }
-}
-
 
 .user-topbar {
   display: flex;
@@ -140,60 +109,6 @@ body {
   font-size: 16px;
 }
 
-/* Mobile responsive styles */
-@media (max-width: 768px) {
-  .topbar-right {
-    gap: 15px;
-  }
-  
-  .notification-link {
-    padding: 6px;
-  }
-  
-  .notification-icon {
-    font-size: 18px;
-  }
-  
-  .notification-badge {
-    width: 16px;
-    height: 16px;
-    font-size: 9px;
-  }
-  
-  .profile-link {
-    padding: 6px 10px;
-    font-size: 14px;
-  }
-  
-  .profile-icon {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .user-topbar {
-    padding: 0 15px;
-  }
-  
-  .topbar-right {
-    gap: 10px;
-  }
-  
-  .profile-link span:last-child {
-    display: none; /* Hide "Profile" text on very small screens */
-  }
-  
-  .profile-link {
-    padding: 8px;
-  }
-}
-
-.user-topbar .title {
-  color: #ffffff;
-  font-size: 22px;
-  font-weight: bold;
-}
-
 .user-topbar a {
   text-decoration: none;
   color: #f9fafb;
@@ -256,7 +171,6 @@ body {
   background: rgba(255, 255, 255, 0.15);
 }
 
-
 .user-content {
   margin-left: 240px;
   padding: 80px 30px;
@@ -264,14 +178,13 @@ body {
   min-height: calc(100vh - 160px);
 }
 
-
 .user-content h2 {
   color: black;
   margin: 20px 0;
   font-size: 1.5rem;
 }
 
-/* --- Card Layout - FIXED FOR SIDE BY SIDE ON DESKTOP --- */
+/* --- Card Layout with Images --- */
 .event-card-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
@@ -283,13 +196,13 @@ body {
   background: white;
   color: black;
   border-radius: 12px;
-  padding: 25px;
+  padding: 0;
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
-  height: 480px; 
-  overflow: hidden; 
+  height: 650px;
+  overflow: hidden;
   position: relative;
 }
 
@@ -298,14 +211,64 @@ body {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
 }
 
-.event-card h3 {
-  margin-top: 0;
-  color: black;
-  font-size: 1.3rem;
+/* Event Card Image */
+.event-card-image {
+  height: 180px;
+  width: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.event-card-content {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* FIXED: Event card title with "See More" functionality */
+.event-card-title-container {
   margin-bottom: 15px;
+}
+
+.event-card-title {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.3rem;
   line-height: 1.3;
   word-wrap: break-word;
-  min-height: 3.2em; /* Reserve space for 2 lines */
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limit to 2 lines */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  max-height: 3.2em; /* 2 lines height */
+}
+
+.event-card-title.expanded {
+  -webkit-line-clamp: unset;
+  max-height: none;
+}
+
+.see-more-btn {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  margin-top: 4px;
+  text-decoration: underline;
+  transition: color 0.3s;
+}
+
+.see-more-btn:hover {
+  color: #1e40af;
 }
 
 .event-card p {
@@ -319,12 +282,12 @@ body {
   color: blue;
 }
 
-/* FIXED: Scrollable description area */
+/* Scrollable description area */
 .event-description-container {
-  flex: 1; /* Take available space */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0px; /* Minimum height for description area */
+  min-height: 0px;
   margin: 10px 0;
 }
 
@@ -341,7 +304,7 @@ body {
   background: rgba(137, 136, 136, 0.1);
   border-radius: 6px;
   padding: 10px;
-  max-height: 150px; /* Maximum height before scrolling */
+  max-height: 150px;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -351,7 +314,7 @@ body {
   color: black;
   margin: 0;
   word-wrap: break-word;
-  white-space: pre-line; 
+  white-space: pre-line;
 }
 
 /* Custom scrollbar for description */
@@ -386,7 +349,6 @@ body {
   border-radius: 20px;
   font-size: 0.8em;
   font-weight: bold;
-  margin-left: 10px;
   text-transform: uppercase;
   display: inline-block;
 }
@@ -394,7 +356,7 @@ body {
 .status-badge.upcoming {
   background-color: #ff9800;
   color: white;
-   border: 1px solid #fed7aa;
+  border: 1px solid #fed7aa;
 }
 
 .status-badge.present {
@@ -404,7 +366,7 @@ body {
 }
 
 .status-badge.past {
-   background: #64748b;
+  background: #64748b;
   color: white;
   border: 1px solid #e2e8f0;
 }
@@ -475,7 +437,7 @@ body {
 /* Desktop (1024px and above) - CARDS SIDE BY SIDE */
 @media (min-width: 1024px) {
   .event-card-container {
-    grid-template-columns: repeat(3, 1fr); /* 3 cards per row */
+    grid-template-columns: repeat(3, 1fr);
     gap: 30px;
   }
 }
@@ -483,7 +445,7 @@ body {
 /* Tablets (768px - 1023px) - 2 CARDS PER ROW */
 @media (min-width: 768px) and (max-width: 1023px) {
   .event-card-container {
-    grid-template-columns: repeat(2, 1fr); /* 2 cards per row */
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
   }
   
@@ -493,8 +455,7 @@ body {
   }
   
   .event-card {
-    padding: 20px;
-    height: 460px; /* Slightly smaller on tablets */
+    height: 600px;
   }
 }
 
@@ -525,9 +486,8 @@ body {
   }
   
   .event-card {
-    min-height: auto;
-    height: 500px; /* Smaller height on mobile */
-    padding: 20px;
+    height: 600px;
+    padding: 0;
   }
   
   .user-topbar {
@@ -538,16 +498,12 @@ body {
     font-size: 18px;
   }
   
-  .user-content h1 {
-    font-size: 1.5rem;
-  }
-  
   .user-content h2 {
     font-size: 1.3rem;
   }
   
   .event-description-scroll {
-    max-height: 120px; /* Smaller scroll area on mobile */
+    max-height: 120px;
   }
 }
 
@@ -567,11 +523,10 @@ body {
   }
   
   .event-card {
-    padding: 15px;
-    height: 400px; /* Even smaller on very small screens */
+    height: 550px;
   }
   
-  .event-card h3 {
+  .event-card-title {
     font-size: 1.1rem;
   }
   
@@ -600,20 +555,15 @@ body {
 
 /* Very Small Mobile */
 @media (max-width: 360px) {
-  .user-content h1 {
-    font-size: 1.3rem;
-  }
-  
   .user-content h2 {
     font-size: 1.1rem;
   }
   
   .event-card {
-    padding: 12px;
-    height: 380px;
+    height: 520px;
   }
   
-  .event-card h3 {
+  .event-card-title {
     font-size: 1rem;
   }
   
@@ -643,7 +593,8 @@ body {
   background: rgba(0, 0, 0, 0.5);
   z-index: 80;
 }
-/* NEW: Search Bar Styles */
+
+/* Search Bar Styles */
 .search-container {
   margin: 25px 0;
   width: 100%;
@@ -698,7 +649,7 @@ body {
   background: linear-gradient(135deg, #5a67d8, #6b46c1);
 }
 
-/* NEW: Barangay Group Styles */
+/* Barangay Group Styles */
 .barangay-group {
   margin-bottom: 40px;
   width: 100%;
@@ -717,4 +668,74 @@ body {
 
 .events-container {
   width: 100%;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .logo-title-container {
+    gap: 8px;
+  }
+  
+  .topbar-logo {
+    height: 30px;
+    width: 30px;
+  }
+  
+  .user-topbar .title {
+    font-size: 18px;
+  }
+  
+  .topbar-right {
+    gap: 15px;
+  }
+  
+  .notification-link {
+    padding: 6px;
+  }
+  
+  .notification-icon {
+    font-size: 18px;
+  }
+  
+  .notification-badge {
+    width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
+  
+  .profile-link {
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  
+  .profile-icon {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-title-container {
+    gap: 6px;
+  }
+  
+  .topbar-logo {
+    height: 25px;
+    width: 25px;
+  }
+  
+  .user-topbar .title {
+    font-size: 16px;
+  }
+  
+  .topbar-right {
+    gap: 10px;
+  }
+  
+  .profile-link span:last-child {
+    display: none;
+  }
+  
+  .profile-link {
+    padding: 8px;
+  }
 }

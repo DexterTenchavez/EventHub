@@ -26,7 +26,7 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   });
 
   const categoryImages = {
-    "Barangay Assembly": "/images/barangay_assembly.jpg",
+    "Barangay Assembly": "/images/barangay_asssembly.jpg",
     "Medical Mission": "/images/Medical_mission.jpg",
     "Vaccination Drive": "/images/Vaccination.jpg",
     "Farming Seminar": "/images/Farmer_seminar.jpg",
@@ -44,11 +44,32 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     "Palarong Barangay": "/images/palarong_barangay.jpg",
     "4Ps Payout": "/images/4ps.jpg",
     "Christmas Party": "/images/christmas.jpg",
-   
+    "Other": "/images/other.jpg",
   };
 
   const getCategoryImage = (category) => {
-    return categoryImages[category] || categoryImages["Default"];
+    // If no category provided, use default
+    if (!category) {
+      return "/images/other.jpg";
+    }
+    
+    // Direct match
+    if (categoryImages[category]) {
+      return categoryImages[category];
+    }
+    
+    // Check if it's one of the predefined categories (case insensitive)
+    const normalizedCategory = category.toLowerCase();
+    const predefinedCategory = Object.keys(categoryImages).find(
+      key => key.toLowerCase() === normalizedCategory
+    );
+    
+    if (predefinedCategory) {
+      return categoryImages[predefinedCategory];
+    }
+    
+    // Default to "Other" image for any custom categories
+    return categoryImages["Other"] || "/images/other.jpg";
   };
 
   useEffect(() => {
@@ -711,86 +732,90 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                 <div className="barangay-header">
                   {barangay} ({barangayGroups[barangay].length} events)
                 </div>
-                <div className="events-grid">
-                  {barangayGroups[barangay].map((event) => {
-                    const eventStatus = getEventStatus(event);
-                    const categoryImage = getCategoryImage(event.category);
-                    
-                    return (
-                      <div 
-                        key={event.id} 
-                        className="event-card"
-                        style={{
-                          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url(${categoryImage})`
-                        }}
-                      >
-                        <div className="event-card-overlay">
-                          <div className="event-card-header">
-                            <h3 className="event-card-title">{event.title}</h3>
-                            <span className={`table-status event-card-status ${eventStatus}`}>
-                              {eventStatus === "upcoming" ? "Upcoming" : 
-                              eventStatus === "present" ? "Started" : 
-                              "Past Event"}
-                            </span>
-                          </div>
-                          
-                          <div className="event-card-details">
-                            <div className="event-card-detail">
-                              <span className="event-card-label">Date:</span>
-                              <span className="event-card-value">
-                                {new Date(event.date).toLocaleDateString('en-US', {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                })}
-                              </span>
-                            </div>
-                            <div className="event-card-detail">
-                              <span className="event-card-label">Time:</span>
-                              <span className="event-card-value">{getTimeRange(event)}</span>
-                            </div>
-                            <div className="event-card-detail">
-                              <span className="event-card-label">Location:</span>
-                              <span className="event-card-value">{event.location}</span>
-                            </div>
-                            <div className="event-card-detail">
-                              <span className="event-card-label">Category:</span>
-                              <span className="event-card-value category-badge">{event.category}</span>
-                            </div>
-                          </div>
-                          
-                          <div className="event-description-container">
-                            <div className="event-description-label">Description:</div>
-                            <div className="event-description-scroll">
-                              <p className="event-description-text">{event.description}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="event-card-actions">
-                            <button 
-                              className="table-btn edit"
-                              onClick={() => handleEdit(event)}
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              className="table-btn registrations"
-                              onClick={() => handleViewRegistrations(event)}
-                            >
-                              Attendance
-                            </button>
-                            <button 
-                              className="table-btn delete"
-                              onClick={() => handleDelete(event.id)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+               
+
+<div className="events-grid">
+  {barangayGroups[barangay].map((event) => {
+    const eventStatus = getEventStatus(event);
+    const categoryImage = getCategoryImage(event.category);
+    
+    return (
+      <div key={event.id} className="events-cards">
+        {/* Image at the top */}
+        <div 
+          className="event-card-image"
+          style={{
+            backgroundImage: `url(${categoryImage})`
+          }}
+        ></div>
+        
+        <div className="event-card-content">
+          <div className="event-card-header">
+            <h3 className="event-card-title">{event.title}</h3>
+            <span className={`event-card-status ${eventStatus}`}>
+              {eventStatus === "upcoming" ? "Upcoming" : 
+               eventStatus === "present" ? "Started" : 
+               "Past Event"}
+            </span>
+          </div>
+          
+          <div className="event-card-details">
+            <div className="event-card-detail">
+              <span className="event-card-label">Date:</span>
+              <span className="event-card-value">
+                {new Date(event.date).toLocaleDateString('en-US', {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+            </div>
+            <div className="event-card-detail">
+              <span className="event-card-label">Time:</span>
+              <span className="event-card-value">{getTimeRange(event)}</span>
+            </div>
+            <div className="event-card-detail">
+              <span className="event-card-label">Location:</span>
+              <span className="event-card-value">{event.location}</span>
+            </div>
+            <div className="event-card-detail">
+              <span className="event-card-label">Category:</span>
+              <span className="event-card-value category-badge">{event.category}</span>
+            </div>
+          </div>
+          
+           <div className="event-description-container">
+            <div className="event-description-label">Description:</div>
+            <div className="event-description-scroll">
+              <p className="event-description-text">{event.description}</p>
+            </div>
+          </div>
+          
+          <div className="event-card-actions">
+            <button 
+              className="table-btn edit"
+              onClick={() => handleEdit(event)}
+            >
+              Edit
+            </button>
+            <button 
+              className="table-btn registrations"
+              onClick={() => handleViewRegistrations(event)}
+            >
+              Attendance
+            </button>
+            <button 
+              className="table-btn delete"
+              onClick={() => handleDelete(event.id)}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  })}
+</div>
               </div>
             ))}
           </div>

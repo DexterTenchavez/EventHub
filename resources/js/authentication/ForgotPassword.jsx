@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { toast } from 'react-toastify';
-import "./authentication-css/login.css";
+import "./authentication-css/password-reset.css";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -24,7 +24,6 @@ export default function ForgotPassword() {
     } catch (error) {
       console.error("Forgot password error:", error);
       
-      // Handle different error responses
       if (error.response?.status === 422) {
         toast.error("Please enter a valid email address.");
       } else if (error.response?.status === 500) {
@@ -38,20 +37,20 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="login-container">
-      <h1 className="login-title">DAGOHOY EVENTHUB</h1>
-      <p className="login-txt">Reset Your Password</p>
+    <div className="password-reset-container">
+      <h1 className="password-reset-title">DAGOHOY EVENTHUB</h1>
+      <p className="password-reset-subtitle">Reset Your Password</p>
       
       {!emailSent ? (
-        <form className="login-form" onSubmit={handleForgotPassword}>
-          <p className="forgot-password-instructions">
+        <form className="password-reset-form" onSubmit={handleForgotPassword}>
+          <p className="password-reset-instructions">
             Enter your email address and we'll send you a code to reset your password.
           </p>
           
           <input
-            className="login-input"
+            className="password-reset-input"
             type="email"
-            placeholder="Enter your email"
+            placeholder="Enter your email address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -59,39 +58,50 @@ export default function ForgotPassword() {
           />
           
           <button 
-            className="login-btn" 
+            className="password-reset-btn" 
             type="submit"
             disabled={loading}
           >
-            {loading ? "Sending..." : "Send Reset Code"}
+            {loading ? (
+              <>
+                <div className="password-loading-spinner"></div>
+                Sending Code...
+              </>
+            ) : (
+              'Send Reset Code'
+            )}
           </button>
         </form>
       ) : (
-        <div className="email-sent-message">
-          <div className="success-icon">✓</div>
-          <h3>Check Your Email</h3>
-          <p>We've sent a password reset code to <strong>{email}</strong></p>
-          <p>Please check your inbox and use the code to reset your password.</p>
+        <div className="password-success-message">
+          <div className="password-success-icon">✓</div>
+          <h3 className="password-success-title">Check Your Email</h3>
+          <p className="password-success-text">
+            We've sent a password reset code to:
+          </p>
+          <div className="password-success-email">{email}</div>
+          <p className="password-success-text">
+            Please check your inbox and use the code to reset your password.
+          </p>
           
-          {/* ADDED: Direct link to reset password page */}
-          <div style={{ margin: '20px 0' }}>
+          <div style={{ margin: '25px 0' }}>
             <Link 
               to={`/reset-password?email=${encodeURIComponent(email)}`} 
-              className="login-btn"
+              className="password-reset-btn"
               style={{ display: 'inline-block', textDecoration: 'none' }}
             >
-              Go to Reset Password Page
+              Go to Reset Password
             </Link>
           </div>
           
-          <Link to="/" className="login-link">
+          <Link to="/" className="password-reset-link">
             Back to Login
           </Link>
         </div>
       )}
       
-      <p className="login-text">
-        Remember your password? <Link className="login-link" to="/">Login</Link> here
+      <p className="password-reset-text">
+        Remember your password? <Link className="password-reset-link" to="/">Login here</Link>
       </p>
     </div>
   );

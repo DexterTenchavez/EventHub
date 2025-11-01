@@ -2,20 +2,20 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import Swal from 'sweetalert2';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import "./authentication-css/Signup.css"
+import { FaEye, FaEyeSlash, FaUser, FaEnvelope, FaPhone, FaVenusMars, FaCalendar, FaMapMarker, FaHome, FaLock } from 'react-icons/fa';
+import "./authentication-css/Signup.css";
 
 export default function Signup() {
   const navigate = useNavigate();
 
   const barangays = [
-  "Anibongan", "Babag", "Cagawasan", "Cagawitan", "Caluasan",
-  "Candelaria", "Can-oling", "Estaca", "La Esperanza", "Liberty",
-  "Magcagong", "Malibago", "Mampas", "Napo", "Poblacion",
-  "San Isidro", "San Jose", "San Miguel", "San Roque", "San Vicente",
-  "Santo Rosario", "Santa Cruz", "Santa Fe", "Santa Lucia", "Santa Rosa",
-  "Santo Niño", "Santo Tomas", "Santo Niño de Panglao", "Taytay", "Tigbao"
-];
+    "Anibongan", "Babag", "Cagawasan", "Cagawitan", "Caluasan",
+    "Candelaria", "Can-oling", "Estaca", "La Esperanza", "Liberty",
+    "Magcagong", "Malibago", "Mampas", "Napo", "Poblacion",
+    "San Isidro", "San Jose", "San Miguel", "San Roque", "San Vicente",
+    "Santo Rosario", "Santa Cruz", "Santa Fe", "Santa Lucia", "Santa Rosa",
+    "Santo Niño", "Santo Tomas", "Santo Niño de Panglao", "Taytay", "Tigbao"
+  ];
 
   const puroks = ["Purok 1", "Purok 2", "Purok 3", "Purok 4", "Purok 5", "Purok 6", "Purok 7"];
 
@@ -25,7 +25,7 @@ export default function Signup() {
     contactNo: "",
     sex: "Male",
     dob: "",
-    barangay: barangays[0],
+    barangay: "",
     purok: puroks[0],
     username: "",
     password: "",
@@ -38,6 +38,7 @@ export default function Signup() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+  
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -47,11 +48,23 @@ export default function Signup() {
     e.preventDefault();
     if (loading) return;
     
+    if (!formData.name || !formData.email || !formData.contactNo || !formData.dob || !formData.barangay || !formData.username || !formData.password) {
+      Swal.fire({
+        title: 'Missing Information',
+        text: 'Please fill in all required fields',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7',
+        background: '#FFF3E0',
+        color: '#E65100',
+        confirmButtonText: 'OK'
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await axios.post("http://localhost:8000/api/register", formData);
       
-      // SweetAlert2 Success
       Swal.fire({
         title: '🎉 Registration Successful!',
         text: 'Please login to continue.',
@@ -70,25 +83,18 @@ export default function Signup() {
       let errorMessage = "Registration failed. Please try again.";
       
       if (error.response) {
-        console.error("Server error:", error.response.data);
-        
-        // Handle different error types
         if (error.response.data.errors) {
-          // Laravel validation errors
           const errors = error.response.data.errors;
-          errorMessage = Object.values(errors)[0][0]; // Get first error message
+          errorMessage = Object.values(errors)[0][0];
         } else if (error.response.data.message) {
           errorMessage = error.response.data.message;
         }
       } else if (error.request) {
-        console.error("No response:", error.request);
         errorMessage = "No response from server. Please check your connection.";
       } else {
-        console.error("Error:", error.message);
         errorMessage = "Error: " + error.message;
       }
       
-      // SweetAlert2 Error
       Swal.fire({
         title: 'Registration Failed',
         text: errorMessage,
@@ -104,116 +110,239 @@ export default function Signup() {
   };
 
   return (
-    <div className="sign-up">
-      <div className="signup-container">
-        <h2 className="signup-title">Sign Up</h2>
-        <form className="signup-form" onSubmit={handleRegister}>
-          <input
-            className="signup-input"
-            type="text"
-            placeholder="Full Name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange} 
-            required
-            disabled={loading}
-          />
-          <input
-            className="signup-input"
-            type="email"
-            placeholder="Email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}  
-            required
-            disabled={loading}
-          />
-          <input
-            className="signup-input"
-            type="text"
-            placeholder="Contact Number"
-            name="contactNo"
-            value={formData.contactNo}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-          <select className="signup-select" name="sex" value={formData.sex} onChange={handleChange} required disabled={loading}>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-         
-          <input
-            className="signup-input"
-            type="text"
-            placeholder="Birthdate (MM/DD/YYYY)"
-            name="dob"
-            value={formData.dob}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            onFocus={(e) => {
-              e.target.type = 'date';
-              e.target.showPicker?.();
-            }}
-            onBlur={(e) => {
-              if (!e.target.value) {
-                e.target.type = 'text';
-              }
-            }}
-          />
-         <select className="signup-select" name="barangay" value={formData.barangay} onChange={handleChange} required disabled={loading}>
-            <option value="" disabled>Select Barangay</option>
-            {barangays.map((b, idx) => (
-              <option key={idx} value={b}>{b}</option>
-            ))}
-          </select>
-          <select className="signup-select" name="purok" value={formData.purok} onChange={handleChange} required disabled={loading}>
-            {puroks.map((p, idx) => (
-              <option key={idx} value={p}>{p}</option>
-            ))}
-          </select>
-          <input
-            className="signup-input"
-            type="text"
-            placeholder="Username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-            disabled={loading}
-          />
-          
-          {/* Password input with eye icon */}
-          <div className="password-input-container">
-            <input
-              className="signup-input password-input"
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-            <button
-              type="button"
-              className="password-toggle-btn"
-              onClick={togglePasswordVisibility}
-              disabled={loading}
+    <div className="auth-container">
+      <div className="auth-split-screen signup-layout">
+        {/* Left Side - Video */}
+        <div className="auth-hero-side">
+          <div className="hero-video-container">
+            <video 
+              autoPlay 
+              muted 
+              loop 
+              playsInline
+              className="hero-video"
             >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}
-            </button>
+              <source src="/images/videos.webm" type="video/webm" />
+            </video>
+            <div className="video-overlay"></div>
+           <div className="hero-content">
+            <h3 className="hero-title">Start Your Event Journey in Dagohoy<br/></h3>
+            <p className="hero-subtitle"><br/>Sign up now to unlock access to hundreds of local events, activities, and community gatherings across all 31 barangays. Whether you're interested in sports tournaments, educational seminars, medical missions, or cultural celebrations, your perfect community experience awaits.</p>
           </div>
-          
-          <button className="signup-btn" type="submit" disabled={loading}>
-            {loading ? "Registering..." : "Register"}
-          </button>
-        </form>
+          </div>
+        </div>
+
+        {/* Right Side - Form */}
+        <div className="auth-form-side">
+          <div className="auth-form-container">
+            <div className="auth-header">
+              <div className="logo">
+                <img src="/images/logo.jpg" alt="EventHub Logo" className="logo-img" />
+                <h1 className="app-name">DAGOHOY EVENTHUB</h1>
+              </div>
+              <h2 className="auth-title">Create Account</h2>
+              <p className="auth-subtitle">Sign up to join our community</p>
+            </div>
+
+            <form className="auth-form signup-form" onSubmit={handleRegister}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Full Name</label>
+                  <div className="input-with-icon">
+                    <FaUser className="input-icon" />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Enter your full name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <div className="input-with-icon">
+                    <FaEnvelope className="input-icon" />
+                    <input
+                      type="email"
+                      className="form-input"
+                      placeholder="Enter your email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Contact Number</label>
+                  <div className="input-with-icon">
+                    <FaPhone className="input-icon" />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Enter contact number"
+                      name="contactNo"
+                      value={formData.contactNo}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Gender</label>
+                  <div className="input-with-icon">
+                    <FaVenusMars className="input-icon" />
+                    <select 
+                      className="form-input"
+                      name="sex" 
+                      value={formData.sex} 
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Birthdate</label>
+                  <div className="input-with-icon">
+                    <FaCalendar className="input-icon" />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="MM/DD/YYYY"
+                      name="dob"
+                      value={formData.dob}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                      onFocus={(e) => {
+                        e.target.type = 'date';
+                        e.target.showPicker?.();
+                      }}
+                      onBlur={(e) => {
+                        if (!e.target.value) {
+                          e.target.type = 'text';
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Barangay</label>
+                  <div className="input-with-icon">
+                    <FaMapMarker className="input-icon" />
+                    <select 
+                      className="form-input"
+                      name="barangay" 
+                      value={formData.barangay} 
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    >
+                      <option value="" disabled>Select Barangay</option>
+                      {barangays.map((b, idx) => (
+                        <option key={idx} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Purok</label>
+                  <div className="input-with-icon">
+                    <FaHome className="input-icon" />
+                    <select 
+                      className="form-input"
+                      name="purok" 
+                      value={formData.purok} 
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    >
+                      {puroks.map((p, idx) => (
+                        <option key={idx} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Username</label>
+                  <div className="input-with-icon">
+                    <FaUser className="input-icon" />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Choose a username"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Password</label>
+                <div className="input-with-icon">
+                  <FaLock className="input-icon" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="form-input"
+                    placeholder="Create a password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={togglePasswordVisibility}
+                    disabled={loading}
+                  >
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  </button>
+                </div>
+              </div>
+
+             <button className="signup-btn" type="submit" disabled={loading}>
+                {loading ? "Creating Account..." : "Sign Up"}
+              </button>
+            </form>
+
+            <div className="auth-footer">
+              <p className="auth-text">
+                Already have an account?{" "}
+                <Link to="/" className="auth-link">Sign in here</Link>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
-      <p className="signup-login-text">
-        Already have an account? <Link className="signup-login-link" to="/">Login</Link> here
-      </p>
     </div>
   );
 }
