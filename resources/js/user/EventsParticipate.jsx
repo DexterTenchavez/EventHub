@@ -9,27 +9,26 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   const [notificationCount, setNotificationCount] = useState(0);
   const [expandedTitles, setExpandedTitles] = useState({});
 
-  // Category images mapping
-  const categoryImages = {
+ const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
     "Medical Mission": "/images/Medical_mission.jpg",
     "Vaccination Drive": "/images/Vaccination.jpg",
-    "Farming Seminar": "/images/Farmer_seminar.jpg",
+    "Farming Seminar": "/images/Farmer_seminar.jpeg",
     "Town Fiesta": "/images/Town_fiesta.jpg",
     "Sports Tournament": "/images/SportsFestival.jpg",
     "Educational Seminar": "/images/Education_seminar.jpg",
     "Civil Registration": "/images/civil_reg.jpg",
-    "Voters Registration": "/images/Voter_reg.jpg",
+    "Voters Registration": "/images/Voter_reg.avif",
     "Clean-up Drive": "/images/cleanup.jpg",
     "Wedding": "/images/wedding.jpg",
     "Tree Planting": "/images/treep_planting.jpg",
     "Dental Mission": "/images/dentalhealth.jpg",
     "Nutrition Program": "/images/nutrition.jpg",
-    "TESDA Training": "/images/tesda courses.jpg",
+    "TESDA Training": "/images/tesdacourses.jpg",
     "Palarong Barangay": "/images/palarong_barangay.jpg",
     "4Ps Payout": "/images/4ps.jpg",
     "Christmas Party": "/images/christmas.jpg",
-   "Other": "/images/other.jpg",
+    "Other": "/images/other.jpg",
   };
 
   const getCategoryImage = (category) => {
