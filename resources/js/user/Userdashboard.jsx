@@ -446,7 +446,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       )}
 
       <div className="user-content">
-        <h2>Available Events</h2>
+        <h1>Available Events</h1>
 
         <div className="search-container">
           <div className="search-box">

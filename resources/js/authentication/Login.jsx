@@ -60,14 +60,14 @@ export default function Login({ setCurrentUser }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-split-screen">
+      <div className="auth-content">
         {/* Left Side - Form */}
         <div className="auth-form-side">
           <div className="auth-form-container">
             <div className="auth-header">
-              <div className="logo">
-                <img src="/images/logo.jpg" alt="EventHub Logo" className="logo-img" />
-                <h1 className="app-name">DAGOHOY EVENTHUB</h1>
+              <div className="auth-logo">
+                <img src="/images/logo.jpg" alt="EventHub Logo" className="auth-logo-img" />
+                <h1 className="auth-app-name">DAGOHOY EVENTHUB</h1>
               </div>
               <h2 className="auth-title">Welcome Back</h2>
               <p className="auth-subtitle">Sign in to your account to continue</p>
@@ -120,9 +120,16 @@ export default function Login({ setCurrentUser }) {
                 </Link>
               </div>
 
-             <button className="login-btn" type="submit" disabled={loading}>
-              {loading ? "Logging in..." : "Log In"}
-            </button>
+              <button className="auth-btn" type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <div className="auth-loading-spinner"></div>
+                    Logging in...
+                  </>
+                ) : (
+                  'Log In'
+                )}
+              </button>
             </form>
 
             <div className="auth-footer">
@@ -136,24 +143,24 @@ export default function Login({ setCurrentUser }) {
 
         {/* Right Side - Video */}
         <div className="auth-hero-side">
-          <div className="hero-video-container">
+          <div className="auth-video-container">
             <video 
               autoPlay 
               muted 
               loop 
               playsInline
-              className="hero-video"
+              className="auth-video"
             >
               <source src="/images/videos.webm" type="video/webm" />
             </video>
-            <div className="video-overlay"></div>
-         <div className="hero-content">
-          <h3 className="hero-title">Dagohoy EventHub: Your Community Connection</h3>
-          <p className="hero-subtitle">Experience the heartbeat of Dagohoy through our centralized<br/>
-             event platform. <br/>
-             Whether you're looking for medical missions, barangay assemblies, sports competitions, or cultural celebrations, 
-             <br/>we bring all local activities to your fingertips. Join thousands of residents in staying connected, informed, and engaged with your community's vibrant social calendar.</p>
-        </div>
+            <div className="auth-video-overlay"></div>
+            <div className="auth-hero-content">
+              <h3 className="auth-hero-title">Dagohoy EventHub: Your Community Connection</h3>
+              <p className="auth-hero-subtitle">Experience the heartbeat of Dagohoy through our centralized<br/>
+                 event platform. <br/>
+                 Whether you're looking for medical missions, barangay assemblies, sports competitions, or cultural celebrations, 
+                 <br/>we bring all local activities to your fingertips. Join thousands of residents in staying connected, informed, and engaged with your community's vibrant social calendar.</p>
+            </div>
           </div>
         </div>
       </div>

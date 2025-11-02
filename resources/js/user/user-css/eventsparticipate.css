@@ -30,7 +30,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0 20px;
-  background: #1a237e;
+  background: #3b82f6;
   color: white;
   height: 60px;
   position: fixed;
@@ -76,7 +76,7 @@ body {
   position: absolute;
   top: -2px;
   right: -2px;
-  background: #ff4757;
+  background: red;
   color: white;
   border-radius: 50%;
   width: 18px;
@@ -86,7 +86,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  border: 2px solid #1a237e;
+  border: 2px solid #3b82f6;
 }
 
 .profile-link {
@@ -200,13 +200,13 @@ body {
 }
 
 .stat-card {
-  background: white;
+    background: linear-gradient(to right, #86ace9, #2d49a4);
   color: black;
   padding: 20px;
   border-radius: 10px;
   text-align: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #667eea;
+  border-left: 4px solid #0e0e0e;
 }
 
 .stat-card h3 {
@@ -215,7 +215,7 @@ body {
   opacity: 0.9;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #666;
+  color: #0a0a0a;
 }
 
 .stat-number {

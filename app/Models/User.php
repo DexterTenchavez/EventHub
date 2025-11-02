@@ -27,6 +27,8 @@ class User extends Authenticatable
         'penalty_expires_at',
         'banned_until',
         'ban_reason',
+        'reset_token',
+        'reset_token_expires_at',
     ];
 
     protected $hidden = [
@@ -42,14 +44,10 @@ class User extends Authenticatable
             'penalty_expires_at' => 'datetime',
             'banned_until' => 'datetime',
             'dob' => 'date',
+            'reset_token_expires_at' => 'datetime',
         ];
     }
 
-    // ==================== PENALTY METHODS ====================
-
-    /**
-     * Check if user is currently banned
-     */
     public function isBanned()
     {
         return $this->banned_until && Carbon::now()->lt($this->banned_until);
@@ -57,7 +55,6 @@ class User extends Authenticatable
 
     public function checkAndResetPenalties()
     {
-        // If penalties have expired, reset everything
         if ($this->penalty_expires_at && \Carbon\Carbon::now()->gt($this->penalty_expires_at)) {
             $oldPenalties = $this->penalties;
             $this->penalties = 0;
@@ -65,34 +62,24 @@ class User extends Authenticatable
             $this->banned_until = null;
             $this->save();
             
-            // Create notification for penalties reset
             $this->createPenaltiesResetNotification($oldPenalties);
             return true;
         }
         return false;
     }
 
-    /**
-     * Add 1 penalty to user
-     */
     public function addPenalty()
     {
-        // First check if penalties need to be reset
         $this->checkAndResetPenalties();
 
-        // Add 1 penalty
         $this->penalties += 1;
         
-        // Set penalty expiration to 30 days from now
         $this->penalty_expires_at = \Carbon\Carbon::now()->addDays(30);
         
-        // If user reaches 3 penalties, automatically ban them
         if ($this->penalties >= 3) {
-            $this->banned_until = $this->penalty_expires_at; // Ban until penalties expire
-            // Create ban notification
+            $this->banned_until = $this->penalty_expires_at;
             $this->createBanNotification();
         } else {
-            // Create penalty notification
             $this->createPenaltyNotification();
         }
         
@@ -106,40 +93,29 @@ class User extends Authenticatable
         if ($this->penalties > 0) {
             $this->penalties -= 1;
             
-            // Update expiration date when decreasing penalties
             if ($this->penalties > 0) {
                 $this->penalty_expires_at = \Carbon\Carbon::now()->addDays(30);
             } else {
                 $this->penalty_expires_at = null;
             }
             
-            // Remove ban if penalties are below 3
             if ($this->penalties < 3 && $this->isBanned()) {
                 $this->banned_until = null;
-                // Create ban lifted notification
                 $this->createBanLiftedNotification();
             }
             
             $this->save();
             
-            // Create penalty removed notification
             $this->createPenaltyRemovedNotification();
         }
         
         return $this;
     }
 
-    /**
-     * Check if user can register for events
-     */
     public function canRegisterForEvents()
     {
-        // Always check and reset expired penalties first
         $this->checkAndResetPenalties();
 
-        // User cannot register if:
-        // 1. They are currently banned, OR
-        // 2. They have 3 or more active penalties
         if ($this->isBanned() || $this->penalties >= 3) {
             return false;
         }
@@ -147,11 +123,6 @@ class User extends Authenticatable
         return true;
     }
 
-    // ==================== NOTIFICATION METHODS ====================
-
-    /**
-     * Create penalty notification
-     */
     private function createPenaltyNotification()
     {
         $message = $this->getPenaltyMessage();
@@ -165,9 +136,6 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Create ban notification
-     */
     private function createBanNotification()
     {
         $banDays = $this->getRemainingBanDays();
@@ -181,9 +149,6 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Create ban lifted notification
-     */
     private function createBanLiftedNotification()
     {
         Notification::create([
@@ -195,9 +160,6 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Create penalty removed notification
-     */
     private function createPenaltyRemovedNotification()
     {
         Notification::create([
@@ -209,9 +171,6 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Create penalties reset notification
-     */
     private function createPenaltiesResetNotification($oldPenalties)
     {
         Notification::create([
@@ -223,9 +182,6 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Get penalty message based on current penalty count
-     */
     private function getPenaltyMessage()
     {
         $remainingDays = $this->getRemainingPenaltyDays();
@@ -245,8 +201,6 @@ class User extends Authenticatable
                 return "You received a penalty. You now have {$this->penalties}/3 penalties.";
         }
     }
-
-    // ==================== HELPER METHODS ====================
 
     public function getRemainingPenaltyDays()
     {
@@ -273,13 +227,10 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
-    // ==================== ARRAY SERIALIZATION ====================
-
     public function toArray()
     {
         $array = parent::toArray();
         
-        // Add computed properties for frontend
         $array['is_banned'] = $this->isBanned();
         $array['remaining_ban_days'] = $this->getRemainingBanDays();
         $array['remaining_penalty_days'] = $this->getRemainingPenaltyDays();
@@ -287,8 +238,6 @@ class User extends Authenticatable
         
         return $array;
     }
-
-    // ==================== RELATIONSHIPS ====================
 
     public function registrations()
     {

@@ -38,7 +38,6 @@ export default function Signup() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-  
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -110,41 +109,41 @@ export default function Signup() {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-split-screen signup-layout">
+    <div className="signup-container">
+      <div className="signup-content">
         {/* Left Side - Video */}
-        <div className="auth-hero-side">
-          <div className="hero-video-container">
+        <div className="signup-hero-side">
+          <div className="signup-video-container">
             <video 
               autoPlay 
               muted 
               loop 
               playsInline
-              className="hero-video"
+              className="signup-video"
             >
               <source src="/images/videos.webm" type="video/webm" />
             </video>
-            <div className="video-overlay"></div>
-           <div className="hero-content">
-            <h3 className="hero-title">Start Your Event Journey in Dagohoy<br/></h3>
-            <p className="hero-subtitle"><br/>Sign up now to unlock access to hundreds of local events, activities, and community gatherings across all 31 barangays. Whether you're interested in sports tournaments, educational seminars, medical missions, or cultural celebrations, your perfect community experience awaits.</p>
-          </div>
+            <div className="signup-video-overlay"></div>
+            <div className="signup-hero-content">
+              <h3 className="signup-hero-title">Start Your Event Journey in Dagohoy</h3>
+              <p className="signup-hero-subtitle">Sign up now to unlock access to hundreds of local events, activities, and community gatherings across all 31 barangays. Whether you're interested in sports tournaments, educational seminars, medical missions, or cultural celebrations, your perfect community experience awaits.</p>
+            </div>
           </div>
         </div>
 
         {/* Right Side - Form */}
-        <div className="auth-form-side">
-          <div className="auth-form-container">
-            <div className="auth-header">
-              <div className="logo">
-                <img src="/images/logo.jpg" alt="EventHub Logo" className="logo-img" />
-                <h1 className="app-name">DAGOHOY EVENTHUB</h1>
+        <div className="signup-form-side">
+          <div className="signup-form-container">
+            <div className="signup-header">
+              <div className="signup-logo">
+                <img src="/images/logo.jpg" alt="EventHub Logo" className="signup-logo-img" />
+                <h1 className="signup-app-name">DAGOHOY EVENTHUB</h1>
               </div>
-              <h2 className="auth-title">Create Account</h2>
-              <p className="auth-subtitle">Sign up to join our community</p>
+              <h2 className="signup-title">Create Account</h2>
+              <p className="signup-subtitle">Sign up to join our community</p>
             </div>
 
-            <form className="auth-form signup-form" onSubmit={handleRegister}>
+            <form className="signup-form" onSubmit={handleRegister}>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Full Name</label>
@@ -329,15 +328,22 @@ export default function Signup() {
                 </div>
               </div>
 
-             <button className="signup-btn" type="submit" disabled={loading}>
-                {loading ? "Creating Account..." : "Sign Up"}
+              <button className="signup-btn" type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <div className="signup-loading-spinner"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
               </button>
             </form>
 
-            <div className="auth-footer">
-              <p className="auth-text">
+            <div className="signup-footer">
+              <p className="signup-text">
                 Already have an account?{" "}
-                <Link to="/" className="auth-link">Sign in here</Link>
+                <Link to="/" className="signup-link">Sign in here</Link>
               </p>
             </div>
           </div>
