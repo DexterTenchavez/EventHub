@@ -14,11 +14,29 @@ use App\Models\Notification;
 
 class EventController extends Controller
 {
-    public function index()
-    {
-        $events = Event::with('registrations')->get();
-        return response()->json($events);
-    }
+   public function index()
+{
+    $events = Event::with(['registrations', 'feedback'])->get();
+    
+    // Transform the events to include user feedback status
+    $events = $events->map(function ($event) {
+        $eventData = $event->toArray();
+        
+        // Include user feedback status if authenticated
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            $user = \Illuminate\Support\Facades\Auth::user();
+            $eventData['user_has_feedback'] = $event->feedback()
+                ->where('user_id', $user->id)
+                ->exists();
+        } else {
+            $eventData['user_has_feedback'] = false;
+        }
+        
+        return $eventData;
+    });
+    
+    return response()->json($events);
+}
 
    public function store(Request $request)
 {

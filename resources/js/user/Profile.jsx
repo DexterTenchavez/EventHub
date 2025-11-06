@@ -258,24 +258,7 @@ export default function Profile({ currentUser, onLogout }) {
               </button>
             </div>
 
-            <div className="stats-compact">
-              <div className="stat-compact">
-                <div className="stat-number">{userStats.registeredEvents}</div>
-                <div className="stat-label">Registered</div>
-              </div>
-              <div className="stat-compact">
-                <div className="stat-number">{userStats.attendedEvents}</div>
-                <div className="stat-label">Attended</div>
-              </div>
-              <div className="stat-compact">
-                <div className="stat-number">{userStats.upcomingEvents}</div>
-                <div className="stat-label">Upcoming</div>
-              </div>
-              <div className="stat-compact">
-                <div className="stat-number">{userStats.penalties}</div>
-                <div className="stat-label">Penalties</div>
-              </div>
-            </div>
+           
           </div>
 
           <div className="penalty-card-compact">

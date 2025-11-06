@@ -11,8 +11,14 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [actionCount, setActionCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedTitles, setExpandedTitles] = useState({});
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [userFeedback, setUserFeedback] = useState({});
+  const [expandedFeedback, setExpandedFeedback] = useState({});
 
- const categoryImages = {
+  const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
     "Medical Mission": "/images/Medical_mission.jpg",
     "Vaccination Drive": "/images/Vaccination.jpg",
@@ -35,17 +41,12 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   };
 
   const getCategoryImage = (category) => {
-    // If no category provided, use default
-    if (!category) {
-      return "/images/other.jpg";
-    }
+    if (!category) return "/images/other.jpg";
     
-    // Direct match
     if (categoryImages[category]) {
       return categoryImages[category];
     }
     
-    // Check if it's one of the predefined categories (case insensitive)
     const normalizedCategory = category.toLowerCase();
     const predefinedCategory = Object.keys(categoryImages).find(
       key => key.toLowerCase() === normalizedCategory
@@ -55,20 +56,46 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       return categoryImages[predefinedCategory];
     }
     
-    // Default to "Other" image for any custom categories
     return categoryImages["Other"] || "/images/other.jpg";
   };
 
+  // Load user feedback from localStorage
+  useEffect(() => {
+    const loadUserFeedback = () => {
+      const feedbackMap = {};
+      events.forEach(event => {
+        const storedFeedback = localStorage.getItem(`feedback_${event.id}_${currentUser?.id}`);
+        if (storedFeedback) {
+          feedbackMap[event.id] = JSON.parse(storedFeedback);
+        }
+      });
+      setUserFeedback(feedbackMap);
+    };
+
+    if (currentUser && events.length > 0) {
+      loadUserFeedback();
+    }
+  }, [events, currentUser]);
 
   // Toggle title expansion
-  const toggleTitleExpansion = (eventId) => {
+  const toggleTitleExpansion = (eventId, e) => {
+    e?.stopPropagation();
     setExpandedTitles(prev => ({
       ...prev,
       [eventId]: !prev[eventId]
     }));
   };
 
-  // Rate limiting: max 5 actions per minute
+  // Toggle feedback expansion
+  const toggleFeedbackExpansion = (eventId, e) => {
+    e?.stopPropagation();
+    setExpandedFeedback(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
+
+  // Rate limiting
   const canPerformAction = () => {
     const now = Date.now();
     const timeDiff = now - lastActionTime;
@@ -160,7 +187,125 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
 
   const barangayGroups = groupEventsByBarangay();
 
-  if (!currentUser) return <p>Loading...</p>;
+  // Event Details Modal Functions
+  const openEventDetails = (event) => {
+    setSelectedEvent(event);
+  };
+
+  const closeEventDetails = () => {
+    setSelectedEvent(null);
+  };
+
+  // Feedback Modal Functions
+  const openFeedbackModal = (event) => {
+    if (!canPerformAction()) return;
+    
+    // Check if user already gave feedback
+    if (userFeedback[event.id]) {
+      Swal.fire({
+        title: 'Feedback Already Submitted',
+        text: `You already submitted ${userFeedback[event.id].rating}★ feedback for this event.`,
+        icon: 'info',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return;
+    }
+    
+    setSelectedEvent(event);
+    setFeedbackRating(0);
+    setFeedbackComment("");
+    setFeedbackModalOpen(true);
+  };
+
+  const closeFeedbackModal = () => {
+    setFeedbackModalOpen(false);
+    setSelectedEvent(null);
+  };
+
+  const handleStarClick = (rating) => {
+    setFeedbackRating(rating);
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackRating) {
+      Swal.fire({
+        title: 'Rating Required',
+        text: 'Please select a rating before submitting feedback.',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8000/api/events/${selectedEvent.id}/feedback`, {
+        rating: feedbackRating,
+        comment: feedbackComment
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      // Save feedback to localStorage and state
+      const feedbackData = {
+        event_id: selectedEvent.id,
+        rating: feedbackRating,
+        comment: feedbackComment,
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`feedback_${selectedEvent.id}_${currentUser.id}`, JSON.stringify(feedbackData));
+      
+      setUserFeedback(prev => ({
+        ...prev,
+        [selectedEvent.id]: feedbackData
+      }));
+
+      Swal.fire({
+        title: 'Thank You!',
+        text: 'Your feedback has been submitted successfully.',
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7'
+      });
+
+      closeFeedbackModal();
+    } catch (err) {
+      console.error('Error submitting feedback:', err);
+      
+      if (err.response?.status === 409) {
+        // User already submitted feedback - update local state
+        const feedbackData = {
+          event_id: selectedEvent.id,
+          rating: feedbackRating,
+          comment: feedbackComment,
+          timestamp: new Date().toISOString()
+        };
+        
+        localStorage.setItem(`feedback_${selectedEvent.id}_${currentUser.id}`, JSON.stringify(feedbackData));
+        
+        setUserFeedback(prev => ({
+          ...prev,
+          [selectedEvent.id]: feedbackData
+        }));
+
+        Swal.fire({
+          title: 'Feedback Already Submitted',
+          text: 'You have already submitted feedback for this event.',
+          icon: 'info',
+          confirmButtonColor: '#4FC3F7'
+        });
+        
+        closeFeedbackModal();
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: err.response?.data?.message || 'Failed to submit feedback. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7'
+        });
+      }
+    }
+  };
 
   const getEventStatus = (event) => {
     const now = new Date();
@@ -270,7 +415,8 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     return 'Time not set';
   };
 
-  const showCancellationReasonModal = (eventId) => {
+  const showCancellationReasonModal = (eventId, e) => {
+    e?.stopPropagation();
     Swal.fire({
       title: 'Cancel Registration',
       html: `
@@ -327,13 +473,18 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     });
   };
 
-  const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
+  const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null, e) => {
+    e?.stopPropagation();
     if (!canPerformAction()) return;
 
     try {
       const token = localStorage.getItem('token');
       const event = events.find((e) => e.id === eventId);
-      const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
+      
+      // FIXED: Handle cases where registrations might be undefined
+      const isRegistered = event.registrations && Array.isArray(event.registrations)
+        ? event.registrations.some(r => r.email === currentUser.email)
+        : false;
 
       let res;
       if (isRegistered) {
@@ -381,16 +532,24 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     }
   };
 
-  const getReasonText = (reason, reasonType) => {
-    const reasonMap = {
-      'health': 'Health Issues',
-      'injury': 'Injury',
-      'schedule_conflict': 'Schedule Conflict',
-      'personal_reasons': 'Personal Reasons',
-      'other': reason
-    };
-    return reasonMap[reasonType] || reason;
+  // Function to check if feedback comment needs expansion
+  const needsFeedbackExpansion = (comment, eventId) => {
+    if (!comment) return false;
+    const isExpanded = expandedFeedback[eventId];
+    return comment.length > 100 && !isExpanded;
   };
+
+  // Function to get truncated feedback comment
+  const getTruncatedFeedback = (comment, eventId) => {
+    if (!comment) return '';
+    const isExpanded = expandedFeedback[eventId];
+    if (isExpanded || comment.length <= 100) {
+      return comment;
+    }
+    return comment.substring(0, 100) + '...';
+  };
+
+  if (!currentUser) return <p>Loading...</p>;
 
   return (
     <div>
@@ -419,7 +578,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           </Link>
           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
             <span className="profile-icon">👤</span>
-           
           </Link>
         </div>
       </div>
@@ -482,14 +640,25 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                 <div className="event-card-container">
                   {barangayGroups[barangay].map(event => {
                     const status = getEventStatus(event);
-                    const isRegistered = event.registrations?.some(r => r.email === currentUser.email);
+                    // FIXED: Handle cases where registrations might be undefined
+                    const isRegistered = event.registrations && Array.isArray(event.registrations)
+                      ? event.registrations.some(r => r.email === currentUser.email)
+                      : false;
                     const categoryImage = getCategoryImage(event.category);
                     const isTitleExpanded = expandedTitles[event.id];
-                    const needsSeeMore = event.title.length > 50; // Show "See More" if title is long
+                    const needsSeeMore = event.title.length > 50;
+                    const hasGivenFeedback = userFeedback[event.id];
+                    const feedbackComment = hasGivenFeedback?.comment;
+                    const needsFeedbackSeeMore = needsFeedbackExpansion(feedbackComment, event.id);
+                    const isFeedbackExpanded = expandedFeedback[event.id];
+                    const displayFeedback = getTruncatedFeedback(feedbackComment, event.id);
 
                     return (
-                      <div className="event-card" key={event.id}>
-                        {/* Event Image */}
+                      <div 
+                        className="event-card clickable" 
+                        key={event.id}
+                        onClick={() => openEventDetails(event)}
+                      >
                         <div 
                           className="event-card-image"
                           style={{
@@ -498,7 +667,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                         ></div>
                         
                         <div className="event-card-content">
-                          {/* Event Title with See More functionality */}
                           <div className="event-card-title-container">
                             <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
                               {event.title}
@@ -506,7 +674,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                             {needsSeeMore && (
                               <button
                                 className="see-more-btn"
-                                onClick={() => toggleTitleExpansion(event.id)}
+                                onClick={(e) => toggleTitleExpansion(event.id, e)}
                               >
                                 {isTitleExpanded ? 'See Less' : 'See More'}
                               </button>
@@ -539,7 +707,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
 
                             {status === "upcoming" && (
                               <button
-                                onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
+                                onClick={(e) => isRegistered ? showCancellationReasonModal(event.id, e) : handleRegisterToggle(event.id, null, null, e)}
                                 className={isRegistered ? "cancel-btn" : "register-btn"}
                               >
                                 {isRegistered ? "Cancel Registration" : "Register Now"}
@@ -550,7 +718,41 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                               <p className="present-event-message">Event is currently happening - Registration closed</p>
                             )}
 
-                            {status === "past" && (
+                            {status === "past" && isRegistered && (
+                              hasGivenFeedback ? (
+                                <div className="feedback-submitted">
+                                  <span className="feedback-check">✅</span>
+                                  <span>Feedback Submitted ({hasGivenFeedback.rating}★)</span>
+                                  {hasGivenFeedback.comment && (
+                                    <div className="feedback-comment-container">
+                                      <div className="feedback-comment-preview">
+                                        <p>"{displayFeedback}"</p>
+                                        {needsFeedbackSeeMore && (
+                                          <button
+                                            className="feedback-see-more-btn"
+                                            onClick={(e) => toggleFeedbackExpansion(event.id, e)}
+                                          >
+                                            {isFeedbackExpanded ? 'See Less' : 'See More'}
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openFeedbackModal(event);
+                                  }}
+                                  className="feedback-btn"
+                                >
+                                  📝 Give Feedback
+                                </button>
+                              )
+                            )}
+
+                            {status === "past" && !isRegistered && (
                               <p className="past-event-message">This event has already passed</p>
                             )}
                           </div>
@@ -564,6 +766,191 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
           </div>
         )}
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && !feedbackModalOpen && (
+        <div className="modal-overlay" onClick={closeEventDetails}>
+          <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedEvent.title}</h2>
+              <button className="close-btn" onClick={closeEventDetails}>×</button>
+            </div>
+            
+            <div className="modal-content">
+              <div className="modal-image">
+                <img 
+                  src={getCategoryImage(selectedEvent.category)} 
+                  alt={selectedEvent.category}
+                />
+              </div>
+              
+              <div className="modal-details">
+                <div className="detail-row">
+                  <strong>Category:</strong>
+                  <span>{selectedEvent.category}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Date:</strong>
+                  <span>{new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Time:</strong>
+                  <span>{getTimeRange(selectedEvent)}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Location:</strong>
+                  <span>{selectedEvent.location}</span>
+                </div>
+                
+                <div className="detail-row full-width">
+                  <strong>Description:</strong>
+                  <div className="modal-description">
+                    {selectedEvent.description}
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <div className="status-info">
+                    <strong>Status:</strong>
+                    <span className={`status-badge ${getEventStatus(selectedEvent)}`}>
+                      {getEventStatus(selectedEvent) === "upcoming" ? "Upcoming" : 
+                       getEventStatus(selectedEvent) === "present" ? "Started" : 
+                       "Past Event"}
+                    </span>
+                  </div>
+
+                  {getEventStatus(selectedEvent) === "upcoming" && (
+                    <button
+                      onClick={() => {
+                        // FIXED: Handle cases where registrations might be undefined
+                        const isRegistered = selectedEvent.registrations && Array.isArray(selectedEvent.registrations)
+                          ? selectedEvent.registrations.some(r => r.email === currentUser.email)
+                          : false;
+                        if (isRegistered) {
+                          showCancellationReasonModal(selectedEvent.id);
+                        } else {
+                          handleRegisterToggle(selectedEvent.id);
+                        }
+                        closeEventDetails();
+                      }}
+                      className={selectedEvent.registrations && Array.isArray(selectedEvent.registrations) && selectedEvent.registrations.some(r => r.email === currentUser.email) ? "cancel-btn" : "register-btn"}
+                    >
+                      {selectedEvent.registrations && Array.isArray(selectedEvent.registrations) && selectedEvent.registrations.some(r => r.email === currentUser.email) ? "Cancel Registration" : "Register Now"}
+                    </button>
+                  )}
+
+                  {getEventStatus(selectedEvent) === "past" && 
+                   selectedEvent.registrations && Array.isArray(selectedEvent.registrations) && 
+                   selectedEvent.registrations.some(r => r.email === currentUser.email) && (
+                    userFeedback[selectedEvent.id] ? (
+                      <div className="feedback-submitted-modal">
+                        <div className="feedback-header">
+                          <span className="feedback-check">✅</span>
+                          <span>Feedback Submitted ({userFeedback[selectedEvent.id].rating}★)</span>
+                        </div>
+                        {userFeedback[selectedEvent.id].comment && (
+                          <div className="feedback-comment-container-modal">
+                            <div className="feedback-comment-preview-modal">
+                              <p><strong>Your comment:</strong> "{getTruncatedFeedback(userFeedback[selectedEvent.id].comment, selectedEvent.id)}"</p>
+                              {needsFeedbackExpansion(userFeedback[selectedEvent.id].comment, selectedEvent.id) && (
+                                <button
+                                  className="feedback-see-more-btn"
+                                  onClick={(e) => toggleFeedbackExpansion(selectedEvent.id, e)}
+                                >
+                                  {expandedFeedback[selectedEvent.id] ? 'See Less' : 'See More'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          closeEventDetails();
+                          openFeedbackModal(selectedEvent);
+                        }}
+                        className="feedback-btn"
+                      >
+                        📝 Give Feedback
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModalOpen && selectedEvent && (
+        <div className="modal-overlay" onClick={closeFeedbackModal}>
+          <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Event Feedback</h2>
+              <button className="close-btn" onClick={closeFeedbackModal}>×</button>
+            </div>
+            
+            <div className="feedback-content">
+              <div className="event-info">
+                <h3>{selectedEvent.title}</h3>
+                <p>{selectedEvent.category} • {new Date(selectedEvent.date).toLocaleDateString()}</p>
+              </div>
+              
+              <div className="rating-section">
+                <label>How would you rate this event?</label>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      className={`star ${star <= feedbackRating ? 'active' : ''}`}
+                      onClick={() => handleStarClick(star)}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="rating-text">
+                  {feedbackRating === 0 && 'Select a rating'}
+                  {feedbackRating === 1 && 'Poor'}
+                  {feedbackRating === 2 && 'Fair'}
+                  {feedbackRating === 3 && 'Good'}
+                  {feedbackRating === 4 && 'Very Good'}
+                  {feedbackRating === 5 && 'Excellent'}
+                </p>
+              </div>
+              
+              <div className="comment-section">
+                <label>Your Comments (Optional):</label>
+                <textarea
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder="Share your experience, suggestions, or any comments about the event..."
+                  rows="4"
+                />
+              </div>
+              
+              <div className="feedback-actions">
+                <button onClick={closeFeedbackModal} className="cancel-btn">
+                  Cancel
+                </button>
+                <button onClick={submitFeedback} className="submit-feedback-btn">
+                  Submit Feedback
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

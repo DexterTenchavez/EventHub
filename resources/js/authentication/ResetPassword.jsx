@@ -160,18 +160,21 @@ export default function ResetPassword() {
                 {email}
               </div>
               
-              <input
-                className="password-reset-input"
-                type="text"
-                placeholder="Enter 6-digit reset code"
-                value={resetToken}
-                onChange={(e) => setResetToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                required
-                disabled={loading}
-                maxLength="6"
-                pattern="[0-9]{6}"
-                inputMode="numeric"
-              />
+             <input
+  className="password-reset-input"
+  type="text"
+  placeholder="Enter 6-character reset code"
+  value={resetToken}
+  onChange={(e) => {
+    // Allow both letters and numbers, limit to 6 characters
+    const value = e.target.value.replace(/[^a-zA-Z0-9]/g, '');
+    setResetToken(value.slice(0, 6));
+  }}
+  required
+  disabled={loading}
+  maxLength="6"
+  pattern="[a-zA-Z0-9]{6}"
+/>
               
               <input
                 className="password-reset-input"

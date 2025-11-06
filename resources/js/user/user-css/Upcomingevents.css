@@ -11,6 +11,18 @@ body {
   padding: 0;
 }
 
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Adjust darkness: 0.3 = light, 0.7 = dark */
+  z-index: -1;
+}
+
 /* Logo and Title Styles */
 .logo-title-container {
   display: flex;
@@ -30,7 +42,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0 20px;
-  background: #3b82f6;
+  background: #2c62b9;
   color: white;
   height: 60px;
   position: fixed;
@@ -86,7 +98,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  border: 2px solid #3b82f6;
+  border: 2px solid #2c62b9;
 }
 
 .profile-link {
@@ -126,7 +138,7 @@ body {
 .user-sidebar {
   width: 220px;
   height: 100vh;
-  background: #1e1e1e;
+  background: #343030;
   color: white;
   padding-top: 70px;
   position: fixed;

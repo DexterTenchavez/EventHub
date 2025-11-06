@@ -8,6 +8,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [expandedTitles, setExpandedTitles] = useState({});
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'present', 'absent', 'pending'
 
  const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
@@ -55,7 +56,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     // Default to "Other" image for any custom categories
     return categoryImages["Other"] || "/images/other.jpg";
   };
-
 
   // Toggle title expansion
   const toggleTitleExpansion = (eventId) => {
@@ -156,6 +156,28 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     setMobileMenuOpen(false);
   };
 
+  // Filter events based on selected status
+  const filteredEvents = participationHistory.filter(item => {
+    if (filterStatus === 'all') return true;
+    return item.attendance === filterStatus;
+  });
+
+  // Handle stat card click
+  const handleStatCardClick = (status) => {
+    setFilterStatus(status);
+  };
+
+  // Get counts for each status
+  const getStatusCount = (status) => {
+    if (status === 'all') return participationHistory.length;
+    return participationHistory.filter(item => item.attendance === status).length;
+  };
+
+  // Check if a stat card is active
+  const isStatCardActive = (status) => {
+    return filterStatus === status;
+  };
+
   if (!currentUser) return <p>Loading...</p>;
 
   return (
@@ -184,7 +206,6 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           </Link>
           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
             <span className="profile-icon">👤</span>
-          
           </Link>
         </div>
       </div>
@@ -219,97 +240,133 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
         ) : (
           <div className="participation-container">
             <div className="stats-summary">
-              <div className="stat-card">
+              <div 
+                className={`stat-card ${isStatCardActive('all') ? 'active' : ''}`}
+                onClick={() => handleStatCardClick('all')}
+              >
                 <h3>Total Events</h3>
-                <p className="stat-number">{participationHistory.length}</p>
+                <p className="stat-number">{getStatusCount('all')}</p>
+                {isStatCardActive('all') && <div className="stat-indicator">✓</div>}
               </div>
-              <div className="stat-card">
+              <div 
+                className={`stat-card present ${isStatCardActive('present') ? 'active' : ''}`}
+                onClick={() => handleStatCardClick('present')}
+              >
                 <h3>Present</h3>
-                <p className="stat-number present">
-                  {participationHistory.filter(item => item.attendance === 'present').length}
-                </p>
+                <p className="stat-number">{getStatusCount('present')}</p>
+                {isStatCardActive('present') && <div className="stat-indicator">✓</div>}
               </div>
-              <div className="stat-card">
+              <div 
+                className={`stat-card absent ${isStatCardActive('absent') ? 'active' : ''}`}
+                onClick={() => handleStatCardClick('absent')}
+              >
                 <h3>Absent</h3>
-                <p className="stat-number absent">
-                  {participationHistory.filter(item => item.attendance === 'absent').length}
-                </p>
+                <p className="stat-number">{getStatusCount('absent')}</p>
+                {isStatCardActive('absent') && <div className="stat-indicator">✓</div>}
               </div>
-              <div className="stat-card">
+              <div 
+                className={`stat-card pending ${isStatCardActive('pending') ? 'active' : ''}`}
+                onClick={() => handleStatCardClick('pending')}
+              >
                 <h3>Pending</h3>
-                <p className="stat-number pending">
-                  {participationHistory.filter(item => item.attendance === 'pending').length}
-                </p>
+                <p className="stat-number">{getStatusCount('pending')}</p>
+                {isStatCardActive('pending') && <div className="stat-indicator">✓</div>}
               </div>
             </div>
 
+            {/* Filter indicator */}
+            {filterStatus !== 'all' && (
+              <div className="filter-indicator">
+                <span>Showing: {filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)} events </span>
+                <button 
+                  className="clear-filter-btn"
+                  onClick={() => setFilterStatus('all')}
+                >
+                  Show All
+                </button>
+              </div>
+            )}
+
             <div className="history-list">
-              {participationHistory.map((item) => {
-                const categoryImage = getCategoryImage(item.eventCategory);
-                const isTitleExpanded = expandedTitles[item.eventId];
-                const needsSeeMore = item.eventTitle.length > 50;
-                
-                return (
-                  <div key={item.eventId} className="participation-card">
-                    {/* Event Image */}
-                    <div 
-                      className="event-card-image"
-                      style={{
-                        backgroundImage: `url(${categoryImage})`
-                      }}
-                    ></div>
-                    
-                    <div className="event-card-content">
-                      <div className="card-header">
-                        {/* Event Title with See More functionality */}
-                        <div className="event-card-title-container">
-                          <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
-                            {item.eventTitle}
-                          </h3>
-                          {needsSeeMore && (
-                            <button
-                              className="see-more-btn"
-                              onClick={() => toggleTitleExpansion(item.eventId)}
-                            >
-                              {isTitleExpanded ? 'See Less' : 'See More'}
-                            </button>
-                          )}
-                        </div>
-                        {getAttendanceBadge(item.attendance)}
-                      </div>
+              {filteredEvents.length === 0 ? (
+                <div className="empty-filter-state">
+                  <h3>No {filterStatus} events found</h3>
+                  <p>You don't have any events with {filterStatus} status.</p>
+                  <button 
+                    className="clear-filter-btn"
+                    onClick={() => setFilterStatus('all')}
+                  >
+                    Show All Events
+                  </button>
+                </div>
+              ) : (
+                filteredEvents.map((item) => {
+                  const categoryImage = getCategoryImage(item.eventCategory);
+                  const isTitleExpanded = expandedTitles[item.eventId];
+                  const needsSeeMore = item.eventTitle.length > 50;
+                  
+                  return (
+                    <div key={item.eventId} className="participation-card">
+                      {/* Event Image */}
+                      <div 
+                        className="event-card-image"
+                        style={{
+                          backgroundImage: `url(${categoryImage})`
+                        }}
+                      ></div>
                       
-                      <div className="card-details">
-                        <p><strong>Category:</strong> {item.eventCategory}</p>
-                        <p><strong>Date:</strong> {new Date(item.eventDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}</p>
-                        <p><strong>Location:</strong> {item.eventLocation}</p>
-                        
-                        <div className="event-description-container">
-                          <div className="event-description-label">Description:</div>
-                          <div className="event-description-scroll">
-                            <p className="event-description-text">{item.eventDescription}</p>
+                      <div className="event-card-content">
+                        <div className="card-header">
+                          {/* Event Title with See More functionality */}
+                          <div className="event-card-title-container">
+                            <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
+                              {item.eventTitle}
+                            </h3>
+                            {needsSeeMore && (
+                              <button
+                                className="see-more-btn"
+                                onClick={() => toggleTitleExpansion(item.eventId)}
+                              >
+                                {isTitleExpanded ? 'See Less' : 'See More'}
+                              </button>
+                            )}
                           </div>
+                          {getAttendanceBadge(item.attendance)}
                         </div>
                         
-                        <div className="participation-details">
-                          <p><strong>Your Status:</strong> 
-                            <span style={{ color: getAttendanceColor(item.attendance), fontWeight: 'bold', marginLeft: '8px' }}>
-                              {item.attendance.charAt(0).toUpperCase() + item.attendance.slice(1)}
-                            </span>
-                          </p>
+                        <div className="card-details">
+                          <p><strong>Category:</strong> {item.eventCategory}</p>
+                          <p><strong>Date:</strong> {new Date(item.eventDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                          })}</p>
+                          <p><strong>Location:</strong> {item.eventLocation}</p>
                           
-                          {item.registeredAt && (
-                            <p><strong>Registered On:</strong> {new Date(item.registeredAt).toLocaleDateString()}</p>
-                          )}
+                          <div className="event-description-container">
+                            <div className="event-description-label">Description:</div>
+                            <div className="event-description-scroll">
+                              <p className="event-description-text">{item.eventDescription}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="participation-details">
+                            <p><strong>Your Status:</strong> 
+                              <span style={{ color: getAttendanceColor(item.attendance), fontWeight: 'bold', marginLeft: '8px' }}>
+                                {item.attendance.charAt(0).toUpperCase() + item.attendance.slice(1)}
+                              </span>
+                            </p>
+                            
+                            {item.registeredAt && (
+                              <p><strong>Registered On:</strong> {new Date(item.registeredAt).toLocaleDateString()}</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         )}

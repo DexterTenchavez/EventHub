@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Swal from 'sweetalert2';
 
-export default function Admindashboard({ events, setEvents, onLogout }) {
+export default function Admindashboard({ events, setEvents, onLogout, currentUser }) {
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -15,6 +15,9 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showOtherCategory, setShowOtherCategory] = useState(false);
   const [otherCategory, setOtherCategory] = useState("");
+  const [eventFeedbacks, setEventFeedbacks] = useState({});
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -48,17 +51,12 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
   };
 
   const getCategoryImage = (category) => {
-    // If no category provided, use default
-    if (!category) {
-      return "/images/other.jpg";
-    }
+    if (!category) return "/images/other.jpg";
     
-    // Direct match
     if (categoryImages[category]) {
       return categoryImages[category];
     }
     
-    // Check if it's one of the predefined categories (case insensitive)
     const normalizedCategory = category.toLowerCase();
     const predefinedCategory = Object.keys(categoryImages).find(
       key => key.toLowerCase() === normalizedCategory
@@ -68,8 +66,58 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
       return categoryImages[predefinedCategory];
     }
     
-    // Default to "Other" image for any custom categories
     return categoryImages["Other"] || "/images/other.jpg";
+  };
+
+  // Fetch event feedback
+  const fetchEventFeedback = async (eventId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:8000/api/events/${eventId}/feedback`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      setEventFeedbacks(prev => ({
+        ...prev,
+        [eventId]: res.data.feedback || []
+      }));
+      
+      return res.data.feedback || [];
+    } catch (err) {
+      console.error("Failed to fetch feedback:", err);
+      return [];
+    }
+  };
+
+  // Load feedback for all events
+  const loadAllFeedbacks = async () => {
+    if (!events.length) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const feedbackPromises = events.map(event => 
+        axios.get(`http://localhost:8000/api/events/${event.id}/feedback`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }).then(res => ({ eventId: event.id, feedback: res.data.feedback || [] }))
+        .catch(err => ({ eventId: event.id, feedback: [] }))
+      );
+      
+      const results = await Promise.all(feedbackPromises);
+      const feedbacksMap = {};
+      results.forEach(result => {
+        feedbacksMap[result.eventId] = result.feedback;
+      });
+      
+      setEventFeedbacks(feedbacksMap);
+    } catch (err) {
+      console.error("Error loading feedbacks:", err);
+    }
   };
 
   useEffect(() => {
@@ -106,6 +154,13 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     fetchEvents();
     fetchUsers();
   }, []);
+
+  // Load feedback when events change
+  useEffect(() => {
+    if (events.length > 0) {
+      loadAllFeedbacks();
+    }
+  }, [events]);
 
   const groupEventsByBarangay = () => {
     const filteredEvents = events.filter(event => 
@@ -462,106 +517,149 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
     return 'Time not set';
   };
 
+  // Handle event card click to show feedback
+  const handleEventCardClick = async (event) => {
+    setSelectedEvent(event);
+    
+    // Fetch feedback if not already loaded
+    if (!eventFeedbacks[event.id]) {
+      const feedbacks = await fetchEventFeedback(event.id);
+      setShowFeedbackModal(true);
+    } else {
+      setShowFeedbackModal(true);
+    }
+  };
+
+  // Calculate average rating
+  const getAverageRating = (feedbacks) => {
+    if (!feedbacks || feedbacks.length === 0) return 0;
+    const sum = feedbacks.reduce((acc, feedback) => acc + feedback.rating, 0);
+    return (sum / feedbacks.length).toFixed(1);
+  };
+
+  // Render star rating
+  const renderStars = (rating) => {
+    return (
+      <div className="star-display">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span
+            key={star}
+            className={`star ${star <= rating ? 'active' : ''}`}
+          >
+            ★
+          </span>
+        ))}
+        <span className="rating-text">
+          {rating === 1 && 'Poor'}
+          {rating === 2 && 'Fair'}
+          {rating === 3 && 'Good'}
+          {rating === 4 && 'Very Good'}
+          {rating === 5 && 'Excellent'}
+        </span>
+      </div>
+    );
+  };
+
   const toggleAttendance = async (eventId, registrationId, attendance) => {
-  try {
-    const token = localStorage.getItem('token');
-    const res = await axios.put(`http://localhost:8000/api/registrations/${registrationId}/attendance`, {
-      attendance: attendance
-    }, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.put(`http://localhost:8000/api/registrations/${registrationId}/attendance`, {
+        attendance: attendance
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-    setSelectedEvent(prev => ({
-      ...prev,
-      registrations: prev.registrations.map(reg =>
-        reg.id === registrationId ? { ...reg, attendance } : reg
-      )
-    }));
+      setSelectedEvent(prev => ({
+        ...prev,
+        registrations: prev.registrations.map(reg =>
+          reg.id === registrationId ? { ...reg, attendance } : reg
+        )
+      }));
 
-    setEvents(prev => prev.map(event =>
-      event.id === eventId
-        ? {
-            ...event,
-            registrations: event.registrations.map(reg =>
-              reg.id === registrationId ? { ...reg, attendance } : reg
-            )
-          }
-        : event
-    ));
-
-    if (res.data.penalty_added) {
-      Swal.fire({
-        title: '✅ Attendance Updated!',
-        html: `
-          <div style="text-align: left;">
-            <p>User marked as <strong>absent</strong></p>
-            <p>⚠️ <strong>1 penalty</strong> has been automatically added</p>
-            <p>User now has <strong>${res.data.penalties} penalties</strong></p>
-            ${res.data.penalties >= 3 ? 
-              '<p style="color: #ff6b6b;">🚫 User is now BANNED from event registration for 30 days</p>' : 
-              ''
+      setEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? {
+              ...event,
+              registrations: event.registrations.map(reg =>
+                reg.id === registrationId ? { ...reg, attendance } : reg
+              )
             }
-          </div>
-        `,
-        icon: 'info',
-        confirmButtonColor: '#4FC3F7',
-        background: '#E3F2FD',
-        color: '#01579B',
-        confirmButtonText: 'OK'
-      });
-    } else if (res.data.penalty_removed) {
+          : event
+      ));
+
+      if (res.data.penalty_added) {
+        Swal.fire({
+          title: '✅ Attendance Updated!',
+          html: `
+            <div style="text-align: left;">
+              <p>User marked as <strong>absent</strong></p>
+              <p>⚠️ <strong>1 penalty</strong> has been automatically added</p>
+              <p>User now has <strong>${res.data.penalties} penalties</strong></p>
+              ${res.data.penalties >= 3 ? 
+                '<p style="color: #ff6b6b;">🚫 User is now BANNED from event registration for 30 days</p>' : 
+                ''
+              }
+            </div>
+          `,
+          icon: 'info',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
+      } else if (res.data.penalty_removed) {
+        Swal.fire({
+          title: '✅ Attendance Updated!',
+          html: `
+            <div style="text-align: left;">
+              <p>User marked as <strong>present</strong></p>
+              <p>✅ <strong>1 penalty</strong> has been removed</p>
+              <p>User now has <strong>${res.data.penalties} penalties</strong></p>
+            </div>
+          `,
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
+      } else {
+        Swal.fire({
+          title: '✅ Attendance Updated!',
+          text: `User marked as ${attendance}!`,
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
+      }
+    } catch (err) {
+      console.error("Error updating attendance:", err);
+      let errorMessage = "Failed to update attendance. ";
+      if (err.response?.status === 404) {
+        errorMessage += "Registration not found.";
+      } else if (err.response?.status === 500) {
+        errorMessage += "Server error.";
+      } else if (err.response?.data?.message) {
+        errorMessage += err.response.data.message;
+      } else {
+        errorMessage += err.message;
+      }
       Swal.fire({
-        title: '✅ Attendance Updated!',
-        html: `
-          <div style="text-align: left;">
-            <p>User marked as <strong>present</strong></p>
-            <p>✅ <strong>1 penalty</strong> has been removed</p>
-            <p>User now has <strong>${res.data.penalties} penalties</strong></p>
-          </div>
-        `,
-        icon: 'success',
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
         confirmButtonColor: '#4FC3F7',
-        background: '#E3F2FD',
-        color: '#01579B',
-        confirmButtonText: 'OK'
-      });
-    } else {
-      Swal.fire({
-        title: '✅ Attendance Updated!',
-        text: `User marked as ${attendance}!`,
-        icon: 'success',
-        confirmButtonColor: '#4FC3F7',
-        background: '#E3F2FD',
-        color: '#01579B',
+        background: '#FFEBEE',
+        color: '#C62828',
         confirmButtonText: 'OK'
       });
     }
-  } catch (err) {
-    console.error("Error updating attendance:", err);
-    let errorMessage = "Failed to update attendance. ";
-    if (err.response?.status === 404) {
-      errorMessage += "Registration not found.";
-    } else if (err.response?.status === 500) {
-      errorMessage += "Server error.";
-    } else if (err.response?.data?.message) {
-      errorMessage += err.response.data.message;
-    } else {
-      errorMessage += err.message;
-    }
-    Swal.fire({
-      title: 'Error',
-      text: errorMessage,
-      icon: 'error',
-      confirmButtonColor: '#4FC3F7',
-      background: '#FFEBEE',
-      color: '#C62828',
-      confirmButtonText: 'OK'
-    });
-  }
-};
+  };
 
   const handleViewRegistrations = async (event) => {
     try {
@@ -671,12 +769,15 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
           />
           <h3 className="title">EventHub</h3>
         </div>
-        <button className="logout-btn" onClick={handleLogout}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
-            <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
-          </svg>
-          <span className="logout-text">Logout</span>
-        </button>
+        
+        <div className="topbar-right">
+          <button className="logout-btn" onClick={handleLogout}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
+              <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+            </svg>
+            <span className="logout-text">Logout</span>
+          </button>
+        </div>
       </div>
 
       <div className={`sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -732,96 +833,126 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                 <div className="barangay-header">
                   {barangay} ({barangayGroups[barangay].length} events)
                 </div>
-               
-
-<div className="events-grid">
-  {barangayGroups[barangay].map((event) => {
-    const eventStatus = getEventStatus(event);
-    const categoryImage = getCategoryImage(event.category);
-    
-    return (
-      <div key={event.id} className="events-cards">
-        {/* Image at the top */}
-        <div 
-          className="event-card-image"
-          style={{
-            backgroundImage: `url(${categoryImage})`
-          }}
-        ></div>
-        
-        <div className="event-card-content">
-          <div className="event-card-header">
-            <h3 className="event-card-title">{event.title}</h3>
-            <span className={`event-card-status ${eventStatus}`}>
-              {eventStatus === "upcoming" ? "Upcoming" : 
-               eventStatus === "present" ? "Started" : 
-               "Past Event"}
-            </span>
-          </div>
-          
-          <div className="event-card-details">
-            <div className="event-card-detail">
-              <span className="event-card-label">Date:</span>
-              <span className="event-card-value">
-                {new Date(event.date).toLocaleDateString('en-US', {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            <div className="event-card-detail">
-              <span className="event-card-label">Time:</span>
-              <span className="event-card-value">{getTimeRange(event)}</span>
-            </div>
-            <div className="event-card-detail">
-              <span className="event-card-label">Location:</span>
-              <span className="event-card-value">{event.location}</span>
-            </div>
-            <div className="event-card-detail">
-              <span className="event-card-label">Category:</span>
-              <span className="event-card-value category-badge">{event.category}</span>
-            </div>
-          </div>
-          
-           <div className="event-description-container">
-            <div className="event-description-label">Description:</div>
-            <div className="event-description-scroll">
-              <p className="event-description-text">{event.description}</p>
-            </div>
-          </div>
-          
-          <div className="event-card-actions">
-            <button 
-              className="table-btn edit"
-              onClick={() => handleEdit(event)}
-            >
-              Edit
-            </button>
-            <button 
-              className="table-btn registrations"
-              onClick={() => handleViewRegistrations(event)}
-            >
-              Attendance
-            </button>
-            <button 
-              className="table-btn delete"
-              onClick={() => handleDelete(event.id)}
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  })}
-</div>
+                <div className="events-grid">
+                  {barangayGroups[barangay].map((event) => {
+                    const eventStatus = getEventStatus(event);
+                    const categoryImage = getCategoryImage(event.category);
+                    const feedbacks = eventFeedbacks[event.id] || [];
+                    const averageRating = getAverageRating(feedbacks);
+                    
+                    return (
+                      <div 
+                        key={event.id} 
+                        className="events-cards clickable"
+                        onClick={() => handleEventCardClick(event)}
+                      >
+                        <div 
+                          className="event-card-image"
+                          style={{
+                            backgroundImage: `url(${categoryImage})`
+                          }}
+                        ></div>
+                        
+                        <div className="event-card-content">
+                          <div className="event-card-header">
+                            <h3 className="event-card-title" title={event.title}>
+                              {event.title}
+                            </h3>
+                            <span className={`event-card-status ${eventStatus}`}>
+                              {eventStatus === "upcoming" ? "Upcoming" : 
+                              eventStatus === "present" ? "Started" : 
+                              "Past Event"}
+                            </span>
+                          </div>
+                          
+                          <div className="event-card-details">
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Date:</span>
+                              <span className="event-card-value">
+                                {new Date(event.date).toLocaleDateString('en-US', {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            </div>
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Time:</span>
+                              <span className="event-card-value">{getTimeRange(event)}</span>
+                            </div>
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Location:</span>
+                              <span className="event-card-value">{event.location}</span>
+                            </div>
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Category:</span>
+                              <span className="event-card-value category-badge">{event.category}</span>
+                            </div>
+                            
+                            {/* Feedback Summary */}
+                            <div className="event-card-detail">
+                              <span className="event-card-label">Feedback:</span>
+                              <span className="event-card-value">
+                                {feedbacks.length > 0 ? (
+                                  <div className="feedback-summary">
+                                    <span className="average-rating">{averageRating} ★</span>
+                                    <span className="feedback-count">({feedbacks.length} reviews)</span>
+                                  </div>
+                                ) : (
+                                  <span className="no-feedback">No feedback yet</span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="event-description-container">
+                            <div className="event-description-label">Description:</div>
+                            <div className="event-description-scroll">
+                              <p className="event-description-text">{event.description}</p>
+                            </div>
+                          </div>
+                          
+                          <div className="event-card-actions">
+                            <button 
+                              className="table-btn edit"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(event);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              className="table-btn registrations"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewRegistrations(event);
+                              }}
+                            >
+                              Attendance
+                            </button>
+                            <button 
+                              className="table-btn delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(event.id);
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
+      {/* Event Creation/Edit Modal */}
       {showModal && (
         <div className="admin-modal-overlay" onClick={() => !loading && setShowModal(false)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
@@ -1010,7 +1141,75 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
         </div>
       )}
 
-      {selectedEvent && (
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedEvent && (
+        <div className="modal-overlay" onClick={() => {
+          setShowFeedbackModal(false);
+          setSelectedEvent(null);
+        }}>
+          <div className="feedback-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Feedback for {selectedEvent.title}</h2>
+              <button className="close-btn" onClick={() => {
+                setShowFeedbackModal(false);
+                setSelectedEvent(null);
+              }}>×</button>
+            </div>
+            
+            <div className="feedback-content">
+              <div className="event-info">
+                <h3>{selectedEvent.title}</h3>
+                <p>{selectedEvent.category} • {new Date(selectedEvent.date).toLocaleDateString()}</p>
+                <div className="overall-rating">
+                  <strong>Overall Rating: </strong>
+                  <span className="average-rating-large">
+                    {getAverageRating(eventFeedbacks[selectedEvent.id] || [])} ★
+                  </span>
+                  <span className="total-feedbacks">
+                    ({eventFeedbacks[selectedEvent.id]?.length || 0} reviews)
+                  </span>
+                </div>
+              </div>
+              
+              {eventFeedbacks[selectedEvent.id] && eventFeedbacks[selectedEvent.id].length > 0 ? (
+                <div className="feedbacks-list">
+                  <h4>User Feedback</h4>
+                  <div className="feedback-items">
+                    {eventFeedbacks[selectedEvent.id].map((feedback, index) => (
+                      <div key={feedback.id || index} className="feedback-item">
+                        <div className="feedback-header">
+                          <div className="user-info">
+                            <strong>{feedback.user_name}</strong>
+                            <span className="user-email">({feedback.user_email})</span>
+                          </div>
+                          <div className="feedback-rating">
+                            {renderStars(feedback.rating)}
+                          </div>
+                        </div>
+                        <div className="feedback-date">
+                          {new Date(feedback.created_at).toLocaleDateString()}
+                        </div>
+                        {feedback.comment && (
+                          <div className="feedback-comment">
+                            <p>{feedback.comment}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="no-feedback-message">
+                  <p>No feedback submitted for this event yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Attendance Modal */}
+      {selectedEvent && !showFeedbackModal && (
         <div className="admin-modal-overlay" onClick={() => setSelectedEvent(null)}>
           <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="attendance-modal-header">
@@ -1049,9 +1248,8 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                         <th>Email</th>
                         <th>Barangay</th>
                         <th>Purok</th>
-                  <th>Attendance</th>
+                        <th>Attendance</th>
                         <th>Actions</th>
-                        
                       </tr>
                     </thead>
                     <tbody>
@@ -1061,14 +1259,14 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                           <td data-label="Email">{reg.email}</td>
                           <td data-label="Barangay">{getUserDetails(reg.email).barangay}</td>
                           <td data-label="Purok">{getUserDetails(reg.email).purok}</td>
-                     <td data-label="Attendance">
-                        <span className={
-                          reg.attendance === 'present' ? 'status-present' :
-                          reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
-                        }>
-                          {reg.attendance || "Pending"}
-                        </span>
-                      </td>
+                          <td data-label="Attendance">
+                            <span className={
+                              reg.attendance === 'present' ? 'status-present' :
+                              reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
+                            }>
+                              {reg.attendance || "Pending"}
+                            </span>
+                          </td>
                           <td data-label="Actions" className="attendance-actions">
                             <button 
                               className="btn-present"
@@ -1085,7 +1283,6 @@ export default function Admindashboard({ events, setEvents, onLogout }) {
                               Absent
                             </button>
                           </td>
-                           
                         </tr>
                       ))}
                     </tbody>

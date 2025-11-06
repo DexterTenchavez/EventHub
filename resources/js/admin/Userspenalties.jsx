@@ -80,6 +80,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedPurok, setSelectedPurok] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [attendanceFilter, setAttendanceFilter] = useState('all'); // 'all', 'present', 'absent', 'pending'
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -217,6 +218,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
   const showUserAttendanceDetails = (user) => {
     setSelectedUser(user);
     setShowAttendanceModal(true);
+    setAttendanceFilter('all'); // Reset filter when opening modal
   };
 
   const getAllRegistrations = () => {
@@ -307,6 +309,16 @@ export default function Userspenalties({ currentUser, onLogout }) {
     return filtered;
   };
 
+  const getFilteredRegistrations = () => {
+    if (!selectedUser || !selectedUser.registrations) return [];
+    
+    if (attendanceFilter === 'all') {
+      return selectedUser.registrations;
+    }
+    
+    return selectedUser.registrations.filter(reg => reg.attendance === attendanceFilter);
+  };
+
   const getUsersByBarangay = () => {
     const usersWithRegistrations = getUsersWithRegistrations();
     const barangayStats = {};
@@ -319,6 +331,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
   };
 
   const filteredUsers = getFilteredUsers();
+  const filteredRegistrations = getFilteredRegistrations();
   const barangayStats = getUsersByBarangay();
 
   const handleNavClick = () => {
@@ -484,6 +497,16 @@ export default function Userspenalties({ currentUser, onLogout }) {
   useEffect(() => {
     setSelectedPurok('');
   }, [selectedBarangay]);
+
+  // Handle summary card click
+  const handleSummaryCardClick = (filter) => {
+    setAttendanceFilter(filter);
+  };
+
+  // Check if a summary card is active
+  const isSummaryCardActive = (filter) => {
+    return attendanceFilter === filter;
+  };
 
   if (loading) {
     return (
@@ -806,6 +829,11 @@ export default function Userspenalties({ currentUser, onLogout }) {
             <div className="modal-header">
               <h2>
                 📊 Attendance Overview
+                {attendanceFilter !== 'all' && (
+                  <span style={{fontSize: '0.8rem', marginLeft: '10px', opacity: '0.8'}}>
+                    (Filtered: {attendanceFilter})
+                  </span>
+                )}
               </h2>
               <button className="close-btn" onClick={() => setShowAttendanceModal(false)}>×</button>
             </div>
@@ -832,22 +860,34 @@ export default function Userspenalties({ currentUser, onLogout }) {
 
               <div className="attendance-summary">
                 <div className="summary-cards">
-                  <div className="summary-card present">
+                  <div 
+                    className={`summary-card present ${isSummaryCardActive('present') ? 'active' : ''}`}
+                    onClick={() => handleSummaryCardClick('present')}
+                  >
                     <h4>✅ Present</h4>
                     <div className="summary-count">{selectedUser.presentCount || 0}</div>
                     <p>Events attended</p>
                   </div>
-                  <div className="summary-card absent">
+                  <div 
+                    className={`summary-card absent ${isSummaryCardActive('absent') ? 'active' : ''}`}
+                    onClick={() => handleSummaryCardClick('absent')}
+                  >
                     <h4>❌ Absent</h4>
                     <div className="summary-count">{selectedUser.absentCount || 0}</div>
                     <p>Events missed</p>
                   </div>
-                  <div className="summary-card pending">
+                  <div 
+                    className={`summary-card pending ${isSummaryCardActive('pending') ? 'active' : ''}`}
+                    onClick={() => handleSummaryCardClick('pending')}
+                  >
                     <h4>⏳ Pending</h4>
                     <div className="summary-count">{selectedUser.pendingCount || 0}</div>
                     <p>Awaiting status</p>
                   </div>
-                  <div className="summary-card total">
+                  <div 
+                    className={`summary-card total ${isSummaryCardActive('all') ? 'active' : ''}`}
+                    onClick={() => handleSummaryCardClick('all')}
+                  >
                     <h4>📋 Total</h4>
                     <div className="summary-count">{selectedUser.registrations ? selectedUser.registrations.length : 0}</div>
                     <p>All registrations</p>
@@ -856,8 +896,8 @@ export default function Userspenalties({ currentUser, onLogout }) {
               </div>
 
               <div className="event-registrations">
-                <h3>🎯 Event Registrations</h3>
-                {selectedUser.registrations && selectedUser.registrations.length > 0 ? (
+                <h3>🎯 Event Registrations ({filteredRegistrations.length})</h3>
+                {filteredRegistrations.length > 0 ? (
                   <div className="registrations-table-container">
                     <table className="registrations-table">
                       <thead>
@@ -870,7 +910,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedUser.registrations.map((reg) => (
+                        {filteredRegistrations.map((reg) => (
                           <tr key={reg.id}>
                             <td className="event-name">{reg.eventName || 'Unknown Event'}</td>
                             <td className="event-date">{formatDate(reg.eventDate)}</td>
@@ -893,7 +933,16 @@ export default function Userspenalties({ currentUser, onLogout }) {
                 ) : (
                   <div className="no-registrations">
                     <div className="no-data-icon">📭</div>
-                    <p>No event registrations found</p>
+                    <p>No event registrations found{attendanceFilter !== 'all' ? ` with ${attendanceFilter} status` : ''}</p>
+                    {attendanceFilter !== 'all' && (
+                      <button 
+                        className="clear-search-btn"
+                        onClick={() => setAttendanceFilter('all')}
+                        style={{marginTop: '10px'}}
+                      >
+                        Show All Registrations
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
