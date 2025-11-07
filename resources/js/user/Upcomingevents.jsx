@@ -12,6 +12,7 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
   const [lastActionTime, setLastActionTime] = useState(0);
   const [actionCount, setActionCount] = useState(0);
   const [expandedTitles, setExpandedTitles] = useState({});
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
@@ -239,6 +240,23 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
     return 'Time not set';
   };
 
+  // Add this function to UserDashboard, UpcomingEvents, and EventsParticipate components
+const getProfilePicture = () => {
+  if (!currentUser) return generateDefaultAvatar('User');
+  
+  const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
+  if (savedProfilePic) {
+    return savedProfilePic;
+  }
+  return generateDefaultAvatar(currentUser.name);
+};
+
+const generateDefaultAvatar = (name) => {
+  const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
   const showCancellationReasonModal = (eventId) => {
     Swal.fire({
       title: 'Cancel Registration',
@@ -365,24 +383,13 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
     setMobileMenuOpen(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      const res = await axios.post('http://localhost:8000/api/logout', {}, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+  // Event Details Modal Functions
+  const openEventDetails = (event) => {
+    setSelectedEvent(event);
+  };
 
-      console.log("Logout response:", res.data);
-      alert(res.data.message);
-
-      localStorage.removeItem('token');
-      onLogout();
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Failed to log out. Please try again.");
-    }
+  const closeEventDetails = () => {
+    setSelectedEvent(null);
   };
 
   if (!currentUser) return <p>Loading...</p>;
@@ -411,10 +418,13 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
               <span className="notification-badge">{notificationCount}</span>
             )}
           </Link>
-          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-            <span className="profile-icon">👤</span>
-          
-          </Link>
+         <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+    <img 
+      src={getProfilePicture()} 
+      alt="Profile" 
+      className="profile-picture-icon"
+    />
+  </Link>
         </div>
       </div>
 
@@ -475,7 +485,11 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
                     const needsSeeMore = event.title.length > 50;
 
                     return (
-                      <div className="event-card" key={event.id}>
+                      <div 
+                        className="event-card clickable" 
+                        key={event.id}
+                        onClick={() => openEventDetails(event)}
+                      >
                         {/* Event Image */}
                         <div 
                           className="event-card-image"
@@ -493,7 +507,10 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
                             {needsSeeMore && (
                               <button
                                 className="see-more-btn"
-                                onClick={() => toggleTitleExpansion(event.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTitleExpansion(event.id);
+                                }}
                               >
                                 {isTitleExpanded ? 'See Less' : 'See More'}
                               </button>
@@ -521,7 +538,10 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
                             </p>
 
                             <button
-                              onClick={() => isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                isRegistered ? showCancellationReasonModal(event.id) : handleRegisterToggle(event.id);
+                              }}
                               className={isRegistered ? "cancel-btn" : "register-btn"}
                             >
                               {isRegistered ? "Cancel Registration" : "Register Now"}
@@ -537,6 +557,83 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
           </div>
         )}
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div className="modal-overlay" onClick={closeEventDetails}>
+          <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedEvent.title}</h2>
+              <button className="close-btn" onClick={closeEventDetails}>×</button>
+            </div>
+            
+            <div className="modal-content">
+              <div className="modal-image">
+                <img 
+                  src={getCategoryImage(selectedEvent.category)} 
+                  alt={selectedEvent.category}
+                />
+              </div>
+              
+              <div className="modal-details">
+                <div className="detail-row">
+                  <strong>Category:</strong>
+                  <span>{selectedEvent.category}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Date:</strong>
+                  <span>{new Date(selectedEvent.date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Time:</strong>
+                  <span>{getTimeRange(selectedEvent)}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Location:</strong>
+                  <span>{selectedEvent.location}</span>
+                </div>
+                
+                <div className="detail-row full-width">
+                  <strong>Description:</strong>
+                  <div className="modal-description">
+                    {selectedEvent.description}
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <div className="status-info">
+                    <strong>Status:</strong>
+                    <span className="status-badge upcoming">Upcoming</span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const isRegistered = selectedEvent.registrations?.some(r => r.email === currentUser.email);
+                      if (isRegistered) {
+                        showCancellationReasonModal(selectedEvent.id);
+                      } else {
+                        handleRegisterToggle(selectedEvent.id);
+                      }
+                      closeEventDetails();
+                    }}
+                    className={selectedEvent.registrations?.some(r => r.email === currentUser.email) ? "cancel-btn" : "register-btn"}
+                  >
+                    {selectedEvent.registrations?.some(r => r.email === currentUser.email) ? "Cancel Registration" : "Register Now"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

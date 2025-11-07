@@ -1280,3 +1280,116 @@ body::before {
   align-items: center;
   justify-content: center;
 }
+
+/* Feedback Submitted Styles - SIMPLIFIED for cards */
+.feedback-submitted {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 12px 16px;
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  border: none;
+  width: 100%;
+}
+
+.feedback-submitted-modal {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 15px;
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  border: none;
+  width: 100%;
+}
+
+.feedback-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-check {
+  font-size: 16px;
+}
+
+.feedback-comment-container-modal {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.feedback-comment-preview-modal {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 12px;
+  border-radius: 4px;
+  text-align: left;
+  width: 100%;
+}
+
+.feedback-comment-preview-modal p {
+  margin: 0 0 8px 0;
+  color: white;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-size: 14px;
+}
+
+.feedback-see-more-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.feedback-see-more-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Profile Picture Icon in Top Bar */
+.profile-picture-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.profile-link {
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: background-color 0.3s ease;
+}
+
+.profile-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.profile-link:hover .profile-picture-icon {
+  border-color: rgba(255, 255, 255, 0.6);
+  transform: scale(1.05);
+}
+
+/* Remove the old profile icon styles */
+.profile-icon {
+  display: none;
+}

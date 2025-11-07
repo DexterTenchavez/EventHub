@@ -473,6 +473,23 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     });
   };
 
+  // Add this function to UserDashboard, UpcomingEvents, and EventsParticipate components
+const getProfilePicture = () => {
+  if (!currentUser) return generateDefaultAvatar('User');
+  
+  const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
+  if (savedProfilePic) {
+    return savedProfilePic;
+  }
+  return generateDefaultAvatar(currentUser.name);
+};
+
+const generateDefaultAvatar = (name) => {
+  const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
   const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null, e) => {
     e?.stopPropagation();
     if (!canPerformAction()) return;
@@ -576,9 +593,13 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
               <span className="notification-badge">{notificationCount}</span>
             )}
           </Link>
-          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-            <span className="profile-icon">👤</span>
-          </Link>
+           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+    <img 
+      src={getProfilePicture()} 
+      alt="Profile" 
+      className="profile-picture-icon"
+    />
+  </Link>
         </div>
       </div>
 
@@ -648,10 +669,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                     const isTitleExpanded = expandedTitles[event.id];
                     const needsSeeMore = event.title.length > 50;
                     const hasGivenFeedback = userFeedback[event.id];
-                    const feedbackComment = hasGivenFeedback?.comment;
-                    const needsFeedbackSeeMore = needsFeedbackExpansion(feedbackComment, event.id);
-                    const isFeedbackExpanded = expandedFeedback[event.id];
-                    const displayFeedback = getTruncatedFeedback(feedbackComment, event.id);
 
                     return (
                       <div 
@@ -722,22 +739,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
                               hasGivenFeedback ? (
                                 <div className="feedback-submitted">
                                   <span className="feedback-check">✅</span>
-                                  <span>Feedback Submitted ({hasGivenFeedback.rating}★)</span>
-                                  {hasGivenFeedback.comment && (
-                                    <div className="feedback-comment-container">
-                                      <div className="feedback-comment-preview">
-                                        <p>"{displayFeedback}"</p>
-                                        {needsFeedbackSeeMore && (
-                                          <button
-                                            className="feedback-see-more-btn"
-                                            onClick={(e) => toggleFeedbackExpansion(event.id, e)}
-                                          >
-                                            {isFeedbackExpanded ? 'See Less' : 'See More'}
-                                          </button>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
+                                  <span>Feedback Submitted</span>
                                 </div>
                               ) : (
                                 <button

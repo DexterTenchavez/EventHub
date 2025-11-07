@@ -9,6 +9,9 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   const [notificationCount, setNotificationCount] = useState(0);
   const [expandedTitles, setExpandedTitles] = useState({});
   const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'present', 'absent', 'pending'
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [userFeedback, setUserFeedback] = useState({});
+  const [expandedFeedback, setExpandedFeedback] = useState({});
 
  const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
@@ -64,6 +67,33 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
       [eventId]: !prev[eventId]
     }));
   };
+
+  // Toggle feedback expansion
+  const toggleFeedbackExpansion = (eventId, e) => {
+    e?.stopPropagation();
+    setExpandedFeedback(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
+
+  // Load user feedback from localStorage
+  useEffect(() => {
+    const loadUserFeedback = () => {
+      const feedbackMap = {};
+      events.forEach(event => {
+        const storedFeedback = localStorage.getItem(`feedback_${event.id}_${currentUser?.id}`);
+        if (storedFeedback) {
+          feedbackMap[event.id] = JSON.parse(storedFeedback);
+        }
+      });
+      setUserFeedback(feedbackMap);
+    };
+
+    if (currentUser && events.length > 0) {
+      loadUserFeedback();
+    }
+  }, [events, currentUser]);
 
   useEffect(() => {
     const fetchParticipationHistory = async () => {
@@ -141,6 +171,24 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     }
   };
 
+
+  // Add this function to UserDashboard, UpcomingEvents, and EventsParticipate components
+const getProfilePicture = () => {
+  if (!currentUser) return generateDefaultAvatar('User');
+  
+  const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
+  if (savedProfilePic) {
+    return savedProfilePic;
+  }
+  return generateDefaultAvatar(currentUser.name);
+};
+
+const generateDefaultAvatar = (name) => {
+  const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+  return `data:image/svg+xml;base64,${btoa(svg)}`;
+};
+
   const getAttendanceColor = (attendance) => {
     switch (attendance) {
       case 'present':
@@ -178,6 +226,32 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     return filterStatus === status;
   };
 
+  // Function to check if feedback comment needs expansion
+  const needsFeedbackExpansion = (comment, eventId) => {
+    if (!comment) return false;
+    const isExpanded = expandedFeedback[eventId];
+    return comment.length > 100 && !isExpanded;
+  };
+
+  // Function to get truncated feedback comment
+  const getTruncatedFeedback = (comment, eventId) => {
+    if (!comment) return '';
+    const isExpanded = expandedFeedback[eventId];
+    if (isExpanded || comment.length <= 100) {
+      return comment;
+    }
+    return comment.substring(0, 100) + '...';
+  };
+
+  // Event Details Modal Functions
+  const openEventDetails = (event) => {
+    setSelectedEvent(event);
+  };
+
+  const closeEventDetails = () => {
+    setSelectedEvent(null);
+  };
+
   if (!currentUser) return <p>Loading...</p>;
 
   return (
@@ -205,8 +279,12 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
             )}
           </Link>
           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-            <span className="profile-icon">👤</span>
-          </Link>
+    <img 
+      src={getProfilePicture()} 
+      alt="Profile" 
+      className="profile-picture-icon"
+    />
+  </Link>
         </div>
       </div>
 
@@ -304,9 +382,14 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                   const categoryImage = getCategoryImage(item.eventCategory);
                   const isTitleExpanded = expandedTitles[item.eventId];
                   const needsSeeMore = item.eventTitle.length > 50;
+                  const hasGivenFeedback = userFeedback[item.eventId];
                   
                   return (
-                    <div key={item.eventId} className="participation-card">
+                    <div 
+                      key={item.eventId} 
+                      className="participation-card clickable"
+                      onClick={() => openEventDetails(item)}
+                    >
                       {/* Event Image */}
                       <div 
                         className="event-card-image"
@@ -325,7 +408,10 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                             {needsSeeMore && (
                               <button
                                 className="see-more-btn"
-                                onClick={() => toggleTitleExpansion(item.eventId)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleTitleExpansion(item.eventId);
+                                }}
                               >
                                 {isTitleExpanded ? 'See Less' : 'See More'}
                               </button>
@@ -360,6 +446,14 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                             {item.registeredAt && (
                               <p><strong>Registered On:</strong> {new Date(item.registeredAt).toLocaleDateString()}</p>
                             )}
+
+                            {/* Feedback Status - SIMPLIFIED for cards */}
+                            {hasGivenFeedback && (
+                              <div className="feedback-submitted">
+                                <span className="feedback-check">✅</span>
+                                <span>Feedback Submitted</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -371,6 +465,98 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
           </div>
         )}
       </div>
+
+      {/* Event Details Modal */}
+      {selectedEvent && (
+        <div className="modal-overlay" onClick={closeEventDetails}>
+          <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>{selectedEvent.eventTitle}</h2>
+              <button className="close-btn" onClick={closeEventDetails}>×</button>
+            </div>
+            
+            <div className="modal-content">
+              <div className="modal-image">
+                <img 
+                  src={getCategoryImage(selectedEvent.eventCategory)} 
+                  alt={selectedEvent.eventCategory}
+                />
+              </div>
+              
+              <div className="modal-details">
+                <div className="detail-row">
+                  <strong>Category:</strong>
+                  <span>{selectedEvent.eventCategory}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Date:</strong>
+                  <span>{new Date(selectedEvent.eventDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Location:</strong>
+                  <span>{selectedEvent.eventLocation}</span>
+                </div>
+                
+                <div className="detail-row">
+                  <strong>Attendance Status:</strong>
+                  <span style={{ color: getAttendanceColor(selectedEvent.attendance), fontWeight: 'bold' }}>
+                    {selectedEvent.attendance.charAt(0).toUpperCase() + selectedEvent.attendance.slice(1)}
+                  </span>
+                </div>
+                
+                {selectedEvent.registeredAt && (
+                  <div className="detail-row">
+                    <strong>Registered On:</strong>
+                    <span>{new Date(selectedEvent.registeredAt).toLocaleDateString()}</span>
+                  </div>
+                )}
+                
+                <div className="detail-row full-width">
+                  <strong>Description:</strong>
+                  <div className="modal-description">
+                    {selectedEvent.eventDescription}
+                  </div>
+                </div>
+
+                {/* Feedback Section in Modal */}
+                {userFeedback[selectedEvent.eventId] && (
+                  <div className="detail-row full-width">
+                    <strong>Your Feedback:</strong>
+                    <div className="feedback-submitted-modal">
+                      <div className="feedback-header">
+                        <span className="feedback-check">✅</span>
+                        <span>Rating: {userFeedback[selectedEvent.eventId].rating}★</span>
+                      </div>
+                      {userFeedback[selectedEvent.eventId].comment && (
+                        <div className="feedback-comment-container-modal">
+                          <div className="feedback-comment-preview-modal">
+                            <p><strong>Your comment:</strong> "{getTruncatedFeedback(userFeedback[selectedEvent.eventId].comment, selectedEvent.eventId)}"</p>
+                            {needsFeedbackExpansion(userFeedback[selectedEvent.eventId].comment, selectedEvent.eventId) && (
+                              <button
+                                className="feedback-see-more-btn"
+                                onClick={(e) => toggleFeedbackExpansion(selectedEvent.eventId, e)}
+                              >
+                                {expandedFeedback[selectedEvent.eventId] ? 'See Less' : 'See More'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
