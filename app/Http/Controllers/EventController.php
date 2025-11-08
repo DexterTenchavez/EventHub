@@ -83,6 +83,14 @@ class EventController extends Controller
                     'is_read' => false,
                     'type' => 'success'
                 ]);
+
+                // FIXED: Send email notification to each user
+                try {
+                    Mail::to($user->email)->send(new NewEventNotification($event));
+                    Log::info('Email notification sent to: ' . $user->email);
+                } catch (\Exception $emailException) {
+                    Log::error('Failed to send email to ' . $user->email . ': ' . $emailException->getMessage());
+                }
             }
         }
 
