@@ -44,12 +44,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/events/{id}/registrations', [RegistrationController::class, 'getRegistrations']);
     Route::put('/registrations/{id}/attendance', [RegistrationController::class, 'updateAttendance']);
     
-    // User management routes
-    Route::get('/users', [UserController::class, 'index']);
-    Route::post('/users/{id}/penalty', [UserController::class, 'addPenalty']);
-    Route::post('/users/{id}/penalty/decrease', [UserController::class, 'decreasePenalty']);
-    Route::get('/users/{id}/details', [UserController::class, 'getUserDetails']);
-    
     // Notification routes
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications', [NotificationController::class, 'store']);
@@ -73,6 +67,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/feedback/{id}', [FeedbackController::class, 'destroy']);
     
     Route::post('/logout', [AuthController::class, 'logout']);
+});
+
+// ADMIN-ONLY ROUTES - MOVE USER ROUTES HERE
+Route::middleware(['auth:sanctum'])->group(function () {
+    // User management routes - WILL CHECK ADMIN IN CONTROLLER
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users/{id}/penalty', [UserController::class, 'addPenalty']);
+    Route::post('/users/{id}/penalty/decrease', [UserController::class, 'decreasePenalty']);
+    Route::get('/users/{id}/details', [UserController::class, 'getUserDetails']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

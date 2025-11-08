@@ -2,18 +2,24 @@ import "./user-css/eventsparticipate.css";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import Swal from 'sweetalert2';
 
 export default function EventsParticipate({ events = [], currentUser, onLogout }) {
   const [participationHistory, setParticipationHistory] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [expandedTitles, setExpandedTitles] = useState({});
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'present', 'absent', 'pending'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [userFeedback, setUserFeedback] = useState({});
   const [expandedFeedback, setExpandedFeedback] = useState({});
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState("");
+  const [lastActionTime, setLastActionTime] = useState(0);
+  const [actionCount, setActionCount] = useState(0);
 
- const categoryImages = {
+  const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
     "Medical Mission": "/images/Medical_mission.jpg",
     "Vaccination Drive": "/images/Vaccination.jpg",
@@ -36,17 +42,14 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   };
 
   const getCategoryImage = (category) => {
-    // If no category provided, use default
     if (!category) {
       return "/images/other.jpg";
     }
     
-    // Direct match
     if (categoryImages[category]) {
       return categoryImages[category];
     }
     
-    // Check if it's one of the predefined categories (case insensitive)
     const normalizedCategory = category.toLowerCase();
     const predefinedCategory = Object.keys(categoryImages).find(
       key => key.toLowerCase() === normalizedCategory
@@ -56,25 +59,33 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
       return categoryImages[predefinedCategory];
     }
     
-    // Default to "Other" image for any custom categories
     return categoryImages["Other"] || "/images/other.jpg";
   };
 
-  // Toggle title expansion
-  const toggleTitleExpansion = (eventId) => {
-    setExpandedTitles(prev => ({
-      ...prev,
-      [eventId]: !prev[eventId]
-    }));
-  };
-
-  // Toggle feedback expansion
-  const toggleFeedbackExpansion = (eventId, e) => {
-    e?.stopPropagation();
-    setExpandedFeedback(prev => ({
-      ...prev,
-      [eventId]: !prev[eventId]
-    }));
+  // Rate limiting function
+  const canPerformAction = () => {
+    const now = Date.now();
+    const timeDiff = now - lastActionTime;
+    
+    if (timeDiff > 60000) {
+      setActionCount(0);
+      setLastActionTime(now);
+      return true;
+    }
+    
+    if (actionCount >= 5) {
+      Swal.fire({
+        title: 'Action Limit Reached',
+        text: 'Please wait a minute before performing more actions.',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return false;
+    }
+    
+    setActionCount(prev => prev + 1);
+    setLastActionTime(now);
+    return true;
   };
 
   // Load user feedback from localStorage
@@ -95,6 +106,23 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     }
   }, [events, currentUser]);
 
+  // Toggle title expansion
+  const toggleTitleExpansion = (eventId) => {
+    setExpandedTitles(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
+
+  // Toggle feedback expansion
+  const toggleFeedbackExpansion = (eventId, e) => {
+    e?.stopPropagation();
+    setExpandedFeedback(prev => ({
+      ...prev,
+      [eventId]: !prev[eventId]
+    }));
+  };
+
   useEffect(() => {
     const fetchParticipationHistory = async () => {
       try {
@@ -113,7 +141,9 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
             eventDescription: event.description,
             registrationDate: registration.created_at || event.date,
             attendance: registration.attendance || 'pending',
-            registeredAt: registration.registered_at || registration.created_at
+            registeredAt: registration.registered_at || registration.created_at,
+            // Add the full event object for feedback functionality
+            fullEvent: event
           };
         });
 
@@ -171,23 +201,21 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
     }
   };
 
+  const getProfilePicture = () => {
+    if (!currentUser) return generateDefaultAvatar('User');
+    
+    const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
+    if (savedProfilePic) {
+      return savedProfilePic;
+    }
+    return generateDefaultAvatar(currentUser.name);
+  };
 
-  // Add this function to UserDashboard, UpcomingEvents, and EventsParticipate components
-const getProfilePicture = () => {
-  if (!currentUser) return generateDefaultAvatar('User');
-  
-  const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
-  if (savedProfilePic) {
-    return savedProfilePic;
-  }
-  return generateDefaultAvatar(currentUser.name);
-};
-
-const generateDefaultAvatar = (name) => {
-  const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
-  const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
-};
+  const generateDefaultAvatar = (name) => {
+    const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+    const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+  };
 
   const getAttendanceColor = (attendance) => {
     switch (attendance) {
@@ -252,6 +280,117 @@ const generateDefaultAvatar = (name) => {
     setSelectedEvent(null);
   };
 
+  // Feedback Modal Functions
+  const openFeedbackModal = (event) => {
+    if (!canPerformAction()) return;
+    
+    // Check if user already gave feedback
+    if (userFeedback[event.eventId]) {
+      Swal.fire({
+        title: 'Feedback Already Submitted',
+        text: `You already submitted ${userFeedback[event.eventId].rating}★ feedback for this event.`,
+        icon: 'info',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return;
+    }
+    
+    setSelectedEvent(event);
+    setFeedbackRating(0);
+    setFeedbackComment("");
+    setFeedbackModalOpen(true);
+  };
+
+  const closeFeedbackModal = () => {
+    setFeedbackModalOpen(false);
+    setSelectedEvent(null);
+  };
+
+  const handleStarClick = (rating) => {
+    setFeedbackRating(rating);
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackRating) {
+      Swal.fire({
+        title: 'Rating Required',
+        text: 'Please select a rating before submitting feedback.',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`http://localhost:8000/api/events/${selectedEvent.eventId}/feedback`, {
+        rating: feedbackRating,
+        comment: feedbackComment
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      // Save feedback to localStorage and state
+      const feedbackData = {
+        event_id: selectedEvent.eventId,
+        rating: feedbackRating,
+        comment: feedbackComment,
+        timestamp: new Date().toISOString()
+      };
+      
+      localStorage.setItem(`feedback_${selectedEvent.eventId}_${currentUser.id}`, JSON.stringify(feedbackData));
+      
+      setUserFeedback(prev => ({
+        ...prev,
+        [selectedEvent.eventId]: feedbackData
+      }));
+
+      Swal.fire({
+        title: 'Thank You!',
+        text: 'Your feedback has been submitted successfully.',
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7'
+      });
+
+      closeFeedbackModal();
+    } catch (err) {
+      console.error('Error submitting feedback:', err);
+      
+      if (err.response?.status === 409) {
+        // User already submitted feedback - update local state
+        const feedbackData = {
+          event_id: selectedEvent.eventId,
+          rating: feedbackRating,
+          comment: feedbackComment,
+          timestamp: new Date().toISOString()
+        };
+        
+        localStorage.setItem(`feedback_${selectedEvent.eventId}_${currentUser.id}`, JSON.stringify(feedbackData));
+        
+        setUserFeedback(prev => ({
+          ...prev,
+          [selectedEvent.eventId]: feedbackData
+        }));
+
+        Swal.fire({
+          title: 'Feedback Already Submitted',
+          text: 'You have already submitted feedback for this event.',
+          icon: 'info',
+          confirmButtonColor: '#4FC3F7'
+        });
+        
+        closeFeedbackModal();
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: err.response?.data?.message || 'Failed to submit feedback. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7'
+        });
+      }
+    }
+  };
+
   if (!currentUser) return <p>Loading...</p>;
 
   return (
@@ -279,12 +418,12 @@ const generateDefaultAvatar = (name) => {
             )}
           </Link>
           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-    <img 
-      src={getProfilePicture()} 
-      alt="Profile" 
-      className="profile-picture-icon"
-    />
-  </Link>
+            <img 
+              src={getProfilePicture()} 
+              alt="Profile" 
+              className="profile-picture-icon"
+            />
+          </Link>
         </div>
       </div>
 
@@ -447,12 +586,25 @@ const generateDefaultAvatar = (name) => {
                               <p><strong>Registered On:</strong> {new Date(item.registeredAt).toLocaleDateString()}</p>
                             )}
 
-                            {/* Feedback Status - SIMPLIFIED for cards */}
-                            {hasGivenFeedback && (
+                            {/* Feedback Status */}
+                            {hasGivenFeedback ? (
                               <div className="feedback-submitted">
                                 <span className="feedback-check">✅</span>
                                 <span>Feedback Submitted</span>
                               </div>
+                            ) : (
+                              // Only show feedback button for past events where user was present
+                              item.attendance === 'present' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openFeedbackModal(item);
+                                  }}
+                                  className="feedback-btn"
+                                >
+                                  📝 Give Feedback
+                                </button>
+                              )
                             )}
                           </div>
                         </div>
@@ -467,7 +619,7 @@ const generateDefaultAvatar = (name) => {
       </div>
 
       {/* Event Details Modal */}
-      {selectedEvent && (
+      {selectedEvent && !feedbackModalOpen && (
         <div className="modal-overlay" onClick={closeEventDetails}>
           <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
@@ -526,7 +678,7 @@ const generateDefaultAvatar = (name) => {
                 </div>
 
                 {/* Feedback Section in Modal */}
-                {userFeedback[selectedEvent.eventId] && (
+                {userFeedback[selectedEvent.eventId] ? (
                   <div className="detail-row full-width">
                     <strong>Your Feedback:</strong>
                     <div className="feedback-submitted-modal">
@@ -551,7 +703,84 @@ const generateDefaultAvatar = (name) => {
                       )}
                     </div>
                   </div>
+                ) : (
+                  // Only show feedback button for past events where user was present
+                  selectedEvent.attendance === 'present' && (
+                    <div className="detail-row full-width">
+                      <strong>Give Feedback:</strong>
+                      <button
+                        onClick={() => {
+                          closeEventDetails();
+                          openFeedbackModal(selectedEvent);
+                        }}
+                        className="feedback-btn"
+                      >
+                        📝 Give Feedback
+                      </button>
+                    </div>
+                  )
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Modal */}
+      {feedbackModalOpen && selectedEvent && (
+        <div className="modal-overlay" onClick={closeFeedbackModal}>
+          <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Event Feedback</h2>
+              <button className="close-btn" onClick={closeFeedbackModal}>×</button>
+            </div>
+            
+            <div className="feedback-content">
+              <div className="event-info">
+                <h3>{selectedEvent.eventTitle}</h3>
+                <p>{selectedEvent.eventCategory} • {new Date(selectedEvent.eventDate).toLocaleDateString()}</p>
+              </div>
+              
+              <div className="rating-section">
+                <label>How would you rate this event?</label>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <span
+                      key={star}
+                      className={`star ${star <= feedbackRating ? 'active' : ''}`}
+                      onClick={() => handleStarClick(star)}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="rating-text">
+                  {feedbackRating === 0 && 'Select a rating'}
+                  {feedbackRating === 1 && 'Poor'}
+                  {feedbackRating === 2 && 'Fair'}
+                  {feedbackRating === 3 && 'Good'}
+                  {feedbackRating === 4 && 'Very Good'}
+                  {feedbackRating === 5 && 'Excellent'}
+                </p>
+              </div>
+              
+              <div className="comment-section">
+                <label>Your Comments (Optional):</label>
+                <textarea
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder="Share your experience, suggestions, or any comments about the event..."
+                  rows="4"
+                />
+              </div>
+              
+              <div className="feedback-actions">
+                <button onClick={closeFeedbackModal} className="cancel-btn">
+                  Cancel
+                </button>
+                <button onClick={submitFeedback} className="submit-feedback-btn">
+                  Submit Feedback
+                </button>
               </div>
             </div>
           </div>

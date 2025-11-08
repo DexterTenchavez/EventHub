@@ -39,31 +39,68 @@ const barangaysWithPuroks = {
 
 const barangays = Object.keys(barangaysWithPuroks);
 
+// Create axios instance with enhanced debugging
 const api = axios.create({
   baseURL: 'http://localhost:8000/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
+// Enhanced request interceptor
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log(`🔐 [REQUEST] ${config.method?.toUpperCase()} ${config.url}`, {
+      hasToken: true,
+      tokenPreview: token.substring(0, 20) + '...'
+    });
+  } else {
+    console.warn(`⚠️ [REQUEST] ${config.method?.toUpperCase()} ${config.url} - NO TOKEN`);
   }
   return config;
+}, (error) => {
+  console.error('❌ Request interceptor error:', error);
+  return Promise.reject(error);
 });
 
+// Enhanced response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ [RESPONSE] ${response.status} ${response.config.url}`, {
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
+    console.error('❌ [RESPONSE ERROR]', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      code: error.code
+    });
+
     if (error.response?.status === 401) {
+      console.warn('🛑 Authentication failed, redirecting to login...');
       localStorage.removeItem('currentUser');
       localStorage.removeItem('token');
       window.location.href = '/';
     }
+    
+    if (error.code === 'ECONNABORTED') {
+      console.error('⏰ Request timeout - server not responding');
+    }
+    
+    if (error.code === 'NETWORK_ERROR') {
+      console.error('🌐 Network error - check server connection');
+    }
+
     return Promise.reject(error);
   }
 );
@@ -80,7 +117,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
   const [selectedBarangay, setSelectedBarangay] = useState('');
   const [selectedPurok, setSelectedPurok] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [attendanceFilter, setAttendanceFilter] = useState('all'); // 'all', 'present', 'absent', 'pending'
+  const [attendanceFilter, setAttendanceFilter] = useState('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -104,31 +141,67 @@ export default function Userspenalties({ currentUser, onLogout }) {
       setLoading(true);
       setError(null);
       
+      console.log('🔄 Starting data fetch...', {
+        currentUser: currentUser?.role,
+        token: localStorage.getItem('token') ? 'Present' : 'Missing'
+      });
+
       if (!currentUser || currentUser.role !== 'admin') {
         throw new Error('Admin privileges required');
       }
 
-      const results = await Promise.allSettled([
+      // Use Promise.allSettled to handle individual failures gracefully
+      const [usersResult, eventsResult] = await Promise.allSettled([
         fetchUsers(),
         fetchEvents()
       ]);
 
-      const usersFailed = results[0].status === 'rejected';
-      const eventsFailed = results[1].status === 'rejected';
-      
-      if (usersFailed) {
-        console.warn('Users fetch failed, using empty array');
+      console.log('📊 Fetch results:', {
+        users: usersResult.status,
+        events: eventsResult.status
+      });
+
+      // Handle users result
+      if (usersResult.status === 'fulfilled') {
+        console.log('✅ Users loaded successfully');
+      } else {
+        console.warn('⚠️ Users fetch failed:', usersResult.reason);
         setUsers([]);
       }
-      
-      if (eventsFailed) {
-        console.warn('Events fetch failed, using empty array');
+
+      // Handle events result
+      if (eventsResult.status === 'fulfilled') {
+        console.log('✅ Events loaded successfully');
+      } else {
+        console.warn('⚠️ Events fetch failed:', eventsResult.reason);
         setEvents([]);
       }
 
+      // If both failed, show error
+      if (usersResult.status === 'rejected' && eventsResult.status === 'rejected') {
+        throw new Error('Failed to load both users and events data');
+      }
+
     } catch (err) {
-      console.error("Error in fetchAllData:", err);
-      setError(err.message || "Failed to load data");
+      console.error("💥 Error in fetchAllData:", err);
+      const errorMessage = err.message || "Failed to load data. Please check if the server is running.";
+      setError(errorMessage);
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Data Load Error',
+        html: `
+          <div style="text-align: left; font-size: 14px;">
+            <p><strong>Error:</strong> ${errorMessage}</p>
+            <p style="margin-top: 10px; color: #ccc;">
+              Check browser console for detailed error information.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'OK',
+        background: '#1e1e1e',
+        color: 'white'
+      });
     } finally {
       setLoading(false);
     }
@@ -136,65 +209,67 @@ export default function Userspenalties({ currentUser, onLogout }) {
 
   const fetchUsers = async () => {
     try {
-      console.log("Fetching users from /api/users...");
+      console.log("🔄 fetchUsers called...");
+      console.log("📝 Current user:", currentUser);
+      console.log("🔑 Token exists:", localStorage.getItem('token') ? 'YES' : 'NO');
       
       const token = localStorage.getItem('token');
-      console.log("Auth token:", token ? "Present" : "Missing");
-      
-      console.log("Current user:", currentUser);
-      
+      console.log("🔐 Token content:", token ? `${token.substring(0, 20)}...` : 'MISSING');
+
+      // Test the debug endpoint first
+      console.log("🧪 Testing debug endpoint...");
+      try {
+        const debugRes = await api.get("/debug-auth");
+        console.log("✅ Debug endpoint success:", debugRes.data);
+      } catch (debugErr) {
+        console.error("❌ Debug endpoint failed:", debugErr.response?.data || debugErr.message);
+      }
+
+      console.log("📡 Making actual users API call to /api/users...");
       const res = await api.get("/users");
-      console.log("Users data received:", res.data);
+      
+      console.log("✅ Users API response received:", {
+        status: res.status,
+        dataLength: res.data?.length,
+        firstUser: res.data?.[0]
+      });
+      
       setUsers(res.data || []);
       return res.data;
     } catch (err) {
-      console.error("Error fetching users:", err);
-      console.error("Error details:", {
+      console.error("💥 Error fetching users:", err);
+      console.error("🔍 Error details:", {
+        message: err.message,
+        code: err.code,
         status: err.response?.status,
         statusText: err.response?.statusText,
         data: err.response?.data,
-        headers: err.response?.headers
+        url: err.config?.url,
+        method: err.config?.method,
+        headers: err.config?.headers
       });
       
       let errorMessage = "Failed to load users";
-      if (err.code === 'ECONNABORTED') {
-        errorMessage = "Request timeout - server is not responding";
-      } else if (err.response?.status === 403) {
+      if (err.response?.status === 403) {
         const serverMessage = err.response?.data?.message || 'Admin access required';
         const userRole = err.response?.data?.your_role || 'unknown';
         errorMessage = `${serverMessage}. Your role: ${userRole}`;
         
-        Swal.fire({
-          icon: 'error',
-          title: 'Admin Access Required',
-          html: `
-            <div style="text-align: left;">
-              <p><strong>Error:</strong> ${serverMessage}</p>
-              <p><strong>Your Role:</strong> ${userRole}</p>
-              <p><strong>Required Role:</strong> admin</p>
-              <p style="margin-top: 15px; font-size: 14px; color: #ccc;">
-                Please contact system administrator to update your role to 'admin'.
-              </p>
-            </div>
-          `,
-          confirmButtonText: 'OK',
-          background: '#1e1e1e',
-          color: 'white'
+        console.error("🚫 Admin access denied details:", {
+          serverMessage,
+          userRole,
+          requiredRole: 'admin',
+          currentUserRole: currentUser?.role
         });
-      } else if (err.response?.status === 500) {
-        errorMessage = "Server error - please try again later";
+      } else if (err.response?.status === 401) {
+        errorMessage = "Authentication failed - please login again";
+      } else if (err.code === 'ECONNABORTED') {
+        errorMessage = "Request timeout - server not responding";
+      } else if (err.code === 'NETWORK_ERROR') {
+        errorMessage = "Network error - check server connection";
       }
       
-      if (err.response?.status !== 403) {
-        Swal.fire({
-          icon: 'warning',
-          title: 'Limited Access',
-          text: errorMessage,
-          confirmButtonText: 'OK',
-          background: '#1e1e1e',
-          color: 'white'
-        });
-      }
+      console.error("📢 Final error message:", errorMessage);
       
       setUsers([]);
       throw err;
@@ -203,13 +278,26 @@ export default function Userspenalties({ currentUser, onLogout }) {
 
   const fetchEvents = async () => {
     try {
-      console.log("Fetching events from /api/events...");
+      console.log("🔄 fetchEvents called...");
+      
       const res = await api.get("/events");
-      console.log("Events data received:", res.data);
+      console.log("✅ Events API response:", {
+        status: res.status,
+        dataLength: res.data?.length,
+        firstEvent: res.data?.[0]
+      });
+      
       setEvents(res.data || []);
       return res.data;
     } catch (err) {
-      console.error("Error fetching events:", err);
+      console.error("💥 Error fetching events:", err);
+      console.error("🔍 Events error details:", {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        url: err.config?.url
+      });
+      
       setEvents([]);
       throw err;
     }
@@ -218,7 +306,7 @@ export default function Userspenalties({ currentUser, onLogout }) {
   const showUserAttendanceDetails = (user) => {
     setSelectedUser(user);
     setShowAttendanceModal(true);
-    setAttendanceFilter('all'); // Reset filter when opening modal
+    setAttendanceFilter('all');
   };
 
   const getAllRegistrations = () => {
@@ -498,12 +586,10 @@ export default function Userspenalties({ currentUser, onLogout }) {
     setSelectedPurok('');
   }, [selectedBarangay]);
 
-  // Handle summary card click
   const handleSummaryCardClick = (filter) => {
     setAttendanceFilter(filter);
   };
 
-  // Check if a summary card is active
   const isSummaryCardActive = (filter) => {
     return attendanceFilter === filter;
   };

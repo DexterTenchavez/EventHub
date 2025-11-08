@@ -17,6 +17,7 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
   const [otherCategory, setOtherCategory] = useState("");
   const [eventFeedbacks, setEventFeedbacks] = useState({});
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [selectedStat, setSelectedStat] = useState('all');
 
   const [formData, setFormData] = useState({
     title: "",
@@ -674,6 +675,7 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
         ...event,
         registrations: res.data,
       });
+      setSelectedStat('all'); // Reset filter when opening modal
     } catch (err) {
       console.error("Error loading registrations:", err);
       Swal.fire({
@@ -750,7 +752,106 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
     return { present, absent, pending, total };
   };
 
+  // Handle stat card click
+  const handleStatClick = (statType) => {
+    setSelectedStat(statType);
+  };
+
+  // Get filtered registrations based on selected stat
+  const getFilteredRegistrations = () => {
+    if (!selectedEvent?.registrations) return [];
+    
+    switch (selectedStat) {
+      case 'present':
+        return selectedEvent.registrations.filter(reg => reg.attendance === 'present');
+      case 'absent':
+        return selectedEvent.registrations.filter(reg => reg.attendance === 'absent');
+      case 'pending':
+        return selectedEvent.registrations.filter(reg => !reg.attendance || reg.attendance === 'pending');
+      default:
+        return selectedEvent.registrations;
+    }
+  };
+
+  // Handle bulk actions
+  const handleBulkAction = async (action) => {
+    if (!selectedEvent || !filteredRegistrations.length) return;
+    
+    const result = await Swal.fire({
+      title: `Mark all as ${action}?`,
+      html: `This will mark <strong>${filteredRegistrations.length} registration(s)</strong> as <strong>${action}</strong>.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4FC3F7',
+      cancelButtonColor: '#d33',
+      confirmButtonText: `Yes, mark as ${action}`,
+      cancelButtonText: 'Cancel',
+      background: '#FFF3E0',
+      color: '#E65100'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const token = localStorage.getItem('token');
+        const promises = filteredRegistrations.map(reg => 
+          axios.put(`http://localhost:8000/api/registrations/${reg.id}/attendance`, {
+            attendance: action
+          }, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        );
+
+        await Promise.all(promises);
+        
+        // Update local state
+        const updatedRegistrations = selectedEvent.registrations.map(reg => {
+          if (filteredRegistrations.some(filteredReg => filteredReg.id === reg.id)) {
+            return { ...reg, attendance: action };
+          }
+          return reg;
+        });
+
+        setSelectedEvent(prev => ({
+          ...prev,
+          registrations: updatedRegistrations
+        }));
+
+        setEvents(prev => prev.map(event =>
+          event.id === selectedEvent.id
+            ? { ...event, registrations: updatedRegistrations }
+            : event
+        ));
+
+        Swal.fire({
+          title: '✅ Bulk Update Complete!',
+          text: `${filteredRegistrations.length} registration(s) marked as ${action}`,
+          icon: 'success',
+          confirmButtonColor: '#4FC3F7',
+          background: '#E3F2FD',
+          color: '#01579B',
+          confirmButtonText: 'OK'
+        });
+
+      } catch (err) {
+        console.error("Error in bulk action:", err);
+        Swal.fire({
+          title: 'Error',
+          text: "Failed to update some registrations",
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7',
+          background: '#FFEBEE',
+          color: '#C62828',
+          confirmButtonText: 'OK'
+        });
+      }
+    }
+  };
+
   const attendanceStats = getAttendanceStats();
+  const filteredRegistrations = getFilteredRegistrations();
 
   return (
     <div className="body">
@@ -1210,37 +1311,85 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
 
       {/* Attendance Modal */}
       {selectedEvent && !showFeedbackModal && (
-        <div className="admin-modal-overlay" onClick={() => setSelectedEvent(null)}>
+        <div className="admin-modal-overlay" onClick={() => {
+          setSelectedEvent(null);
+          setSelectedStat('all');
+        }}>
           <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
             <div className="attendance-modal-header">
               <h2>Registrations for {selectedEvent.title}</h2>
-              <button className="admin-modal-close" onClick={() => setSelectedEvent(null)}>×</button>
+              <button className="admin-modal-close" onClick={() => {
+                setSelectedEvent(null);
+                setSelectedStat('all');
+              }}>×</button>
             </div>
             <div className="admin-form">
               <div className="attendance-summary">
                 <h3>Attendance Summary</h3>
                 <div className="attendance-stats">
-                  <div className="stat-card present">
-                    <div className="stat-number present">{attendanceStats.present}</div>
-                    <div className="stat-label">Present</div>
-                  </div>
-                  <div className="stat-card absent">
-                    <div className="stat-number absent">{attendanceStats.absent}</div>
-                    <div className="stat-label">Absent</div>
-                  </div>
-                  <div className="stat-card pending">
-                    <div className="stat-number pending">{attendanceStats.pending}</div>
-                    <div className="stat-label">Pending</div>
-                  </div>
-                  <div className="stat-card total">
+                  <div 
+                    className={`stat-card total ${selectedStat === 'all' ? 'active' : ''}`}
+                    onClick={() => handleStatClick('all')}
+                  >
                     <div className="stat-number total">{attendanceStats.total}</div>
                     <div className="stat-label">Total</div>
                   </div>
+                  <div 
+                    className={`stat-card present ${selectedStat === 'present' ? 'active' : ''}`}
+                    onClick={() => handleStatClick('present')}
+                  >
+                    <div className="stat-number present">{attendanceStats.present}</div>
+                    <div className="stat-label">Present</div>
+                  </div>
+                  <div 
+                    className={`stat-card absent ${selectedStat === 'absent' ? 'active' : ''}`}
+                    onClick={() => handleStatClick('absent')}
+                  >
+                    <div className="stat-number absent">{attendanceStats.absent}</div>
+                    <div className="stat-label">Absent</div>
+                  </div>
+                  <div 
+                    className={`stat-card pending ${selectedStat === 'pending' ? 'active' : ''}`}
+                    onClick={() => handleStatClick('pending')}
+                  >
+                    <div className="stat-number pending">{attendanceStats.pending}</div>
+                    <div className="stat-label">Pending</div>
+                  </div>
                 </div>
+
+                {/* Bulk Actions */}
+                {selectedStat !== 'all' && filteredRegistrations.length > 0 && (
+                  <div className="bulk-actions">
+                    <button 
+                      className="bulk-action-btn present"
+                      onClick={() => handleBulkAction('present')}
+                    >
+                      Mark all as Present
+                    </button>
+                    <button 
+                      className="bulk-action-btn absent"
+                      onClick={() => handleBulkAction('absent')}
+                    >
+                      Mark all as Absent
+                    </button>
+                    {selectedStat === 'pending' && (
+                      <button 
+                        className="bulk-action-btn reset"
+                        onClick={() => handleBulkAction('pending')}
+                      >
+                        Reset to Pending
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {selectedEvent.registrations && selectedEvent.registrations.length > 0 ? (
+              {filteredRegistrations && filteredRegistrations.length > 0 ? (
                 <div className="attendance-table-container">
+                  <div className="table-header-info">
+                    Showing {filteredRegistrations.length} of {attendanceStats.total} registrations
+                    {selectedStat !== 'all' && ` (${selectedStat})`}
+                  </div>
                   <table className="admin-table responsive-table">
                     <thead>
                       <tr>
@@ -1253,7 +1402,7 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedEvent.registrations.map((reg) => (
+                      {filteredRegistrations.map((reg) => (
                         <tr key={reg.id}>
                           <td data-label="Name">{reg.name}</td>
                           <td data-label="Email">{reg.email}</td>
@@ -1289,7 +1438,7 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
                   </table>
                 </div>
               ) : (
-                <p>No registrations yet.</p>
+                <p>No registrations found{selectedStat !== 'all' ? ` with status "${selectedStat}"` : ''}.</p>
               )}
             </div>
           </div>
