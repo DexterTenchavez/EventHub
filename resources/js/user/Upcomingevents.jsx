@@ -9,8 +9,6 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
-  const [lastActionTime, setLastActionTime] = useState(0);
-  const [actionCount, setActionCount] = useState(0);
   const [expandedTitles, setExpandedTitles] = useState({});
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -37,17 +35,14 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
   };
 
   const getCategoryImage = (category) => {
-    // If no category provided, use default
     if (!category) {
       return "/images/other.jpg";
     }
     
-    // Direct match
     if (categoryImages[category]) {
       return categoryImages[category];
     }
     
-    // Check if it's one of the predefined categories (case insensitive)
     const normalizedCategory = category.toLowerCase();
     const predefinedCategory = Object.keys(categoryImages).find(
       key => key.toLowerCase() === normalizedCategory
@@ -57,43 +52,21 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
       return categoryImages[predefinedCategory];
     }
     
-    // Default to "Other" image for any custom categories
     return categoryImages["Other"] || "/images/other.jpg";
   };
 
+  const getUserBarangay = () => {
+    return currentUser?.barangay || 
+           currentUser?.location || 
+           currentUser?.address?.barangay || 
+           'Unknown';
+  };
 
-  // Toggle title expansion
   const toggleTitleExpansion = (eventId) => {
     setExpandedTitles(prev => ({
       ...prev,
       [eventId]: !prev[eventId]
     }));
-  };
-
-  // Rate limiting: max 5 actions per minute
-  const canPerformAction = () => {
-    const now = Date.now();
-    const timeDiff = now - lastActionTime;
-    
-    if (timeDiff > 60000) {
-      setActionCount(0);
-      setLastActionTime(now);
-      return true;
-    }
-    
-    if (actionCount >= 5) {
-      Swal.fire({
-        title: 'Action Limit Reached',
-        text: 'Please wait a minute before performing more actions.',
-        icon: 'warning',
-        confirmButtonColor: '#4FC3F7'
-      });
-      return false;
-    }
-    
-    setActionCount(prev => prev + 1);
-    setLastActionTime(now);
-    return true;
   };
 
   const getEventStatus = (event) => {
@@ -177,7 +150,19 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
 
   const barangayGroups = groupEventsByBarangay();
 
-  // Load notification count from API
+  const getSortedBarangays = (groups) => {
+    const userBarangay = getUserBarangay();
+    const barangays = Object.keys(groups);
+    
+    return barangays.sort((a, b) => {
+      if (a === userBarangay) return -1;
+      if (b === userBarangay) return 1;
+      return a.localeCompare(b);
+    });
+  };
+
+  const sortedBarangays = getSortedBarangays(barangayGroups);
+
   useEffect(() => {
     const loadNotificationCount = async () => {
       try {
@@ -240,8 +225,7 @@ export default function Upcomingevents({ events = [], setEvents, currentUser, on
     return 'Time not set';
   };
 
-  // Add this function to UserDashboard, UpcomingEvents, and EventsParticipate components
-const getProfilePicture = () => {
+  const getProfilePicture = () => {
   if (!currentUser) return generateDefaultAvatar('User');
   
   const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
@@ -315,8 +299,6 @@ const generateDefaultAvatar = (name) => {
   };
 
   const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null) => {
-    if (!canPerformAction()) return;
-
     try {
       const token = localStorage.getItem('token');
       const event = events.find((e) => e.id === eventId);
@@ -359,12 +341,22 @@ const generateDefaultAvatar = (name) => {
 
     } catch (err) {
       console.error('Error:', err.response?.data || err.message);
-      Swal.fire({
-        title: 'Error',
-        text: err.response?.data?.message || 'Operation failed',
-        icon: 'error',
-        confirmButtonColor: '#4FC3F7'
-      });
+      
+      if (err.response?.status === 429) {
+        Swal.fire({
+          title: 'Registration Limit Reached',
+          text: err.response?.data?.message || 'Too many registration attempts.',
+          icon: 'warning',
+          confirmButtonColor: '#4FC3F7'
+        });
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: err.response?.data?.message || 'Operation failed',
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7'
+        });
+      }
     }
   };
 
@@ -383,7 +375,6 @@ const generateDefaultAvatar = (name) => {
     setMobileMenuOpen(false);
   };
 
-  // Event Details Modal Functions
   const openEventDetails = (event) => {
     setSelectedEvent(event);
   };
@@ -472,10 +463,17 @@ const generateDefaultAvatar = (name) => {
           </div>
         ) : (
           <div className="events-container">
-            {Object.keys(barangayGroups).map(barangay => (
+            {sortedBarangays.map(barangay => (
               <div key={barangay} className="barangay-group">
                 <div className="barangay-header">
-                  {barangay} ({barangayGroups[barangay].length} upcoming events)
+                  {barangay === getUserBarangay() ? (
+                    <>
+                      <span className="user-barangay-badge">Your Barangay</span>
+                      {barangay} ({barangayGroups[barangay].length} upcoming events)
+                    </>
+                  ) : (
+                    `${barangay} (${barangayGroups[barangay].length} upcoming events)`
+                  )}
                 </div>
                 <div className="event-card-container">
                   {barangayGroups[barangay].map(event => {
@@ -490,7 +488,6 @@ const generateDefaultAvatar = (name) => {
                         key={event.id}
                         onClick={() => openEventDetails(event)}
                       >
-                        {/* Event Image */}
                         <div 
                           className="event-card-image"
                           style={{
@@ -499,7 +496,6 @@ const generateDefaultAvatar = (name) => {
                         ></div>
                         
                         <div className="event-card-content">
-                          {/* Event Title with See More functionality */}
                           <div className="event-card-title-container">
                             <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
                               {event.title}
@@ -558,7 +554,6 @@ const generateDefaultAvatar = (name) => {
         )}
       </div>
 
-      {/* Event Details Modal */}
       {selectedEvent && (
         <div className="modal-overlay" onClick={closeEventDetails}>
           <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>

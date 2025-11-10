@@ -7,150 +7,172 @@ use App\Models\Event;
 use App\Models\Registration;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 
 class RegistrationController extends Controller
 {
-   public function register($id, Request $request)
-{
-    try {
-        Log::info('Registration attempt', [
-            'event_id' => $id,
-            'email' => $request->email,
-            'name' => $request->name,
-            'all_request_data' => $request->all()
-        ]);
-
-        // 1. Validate request data
-        $request->validate([
-            'email' => 'required|email',
-            'name' => 'required|string'
-        ]);
-
-        // 2. Find the event - ensure ID is integer
-        $event = Event::find((int)$id);
-        if (!$event) {
-            Log::warning('Event not found', ['event_id' => $id]);
-            return response()->json(['message' => 'Event not found'], 404);
-        }
-
-        // 3. Find the user
-        $user = User::where('email', $request->email)->first();
-        if (!$user) {
-            Log::warning('User not found', ['email' => $request->email]);
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        Log::info('User found', ['user_id' => $user->id, 'email' => $user->email]);
-
-        // 4. Check if already registered (only active registrations)
-        $existingRegistration = Registration::where('event_id', (int)$id)
-            ->where('email', $request->email)
-            ->where('status', 'registered')
-            ->first();
-
-        if ($existingRegistration) {
-            Log::warning('User already registered', [
-                'event_id' => $id,
-                'email' => $request->email,
-                'registration_id' => $existingRegistration->id
-            ]);
-            return response()->json([
-                'message' => 'User already registered for this event',
-                'registration_id' => $existingRegistration->id
-            ], 400);
-        }
-
-        // 5. Check for any existing cancelled registration
-        $cancelledRegistration = Registration::where('event_id', (int)$id)
-            ->where('email', $request->email)
-            ->where('status', 'cancelled')
-            ->first();
-
-        if ($cancelledRegistration) {
-            Log::info('Found cancelled registration, re-activating', [
-                'registration_id' => $cancelledRegistration->id
-            ]);
+  public function register($id, Request $request)
+    {
+        try {
+            // BACKEND RATE LIMITING: 5 registrations per hour per user
+            $rateLimitKey = 'event_registration:' . $request->email;
             
-            // Reactivate the cancelled registration
-            $cancelledRegistration->update([
-                'status' => 'registered',
-                'cancellation_reason' => null,
-                'cancelled_at' => null
-            ]);
-
-            return response()->json([
-                'message' => 'Registration re-activated successfully',
-                'registration_id' => $cancelledRegistration->id
-            ]);
-        }
-
-        // 6. Check if user can register (penalty/ban check) - with better logging
-        if (method_exists($user, 'canRegisterForEvents')) {
-            if (!$user->canRegisterForEvents()) {
-                Log::warning('User cannot register due to penalties/ban', [
-                    'user_id' => $user->id,
-                    'penalties' => $user->penalties ?? 'N/A',
-                    'banned_until' => $user->banned_until ?? 'N/A'
+            if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+                $seconds = RateLimiter::availableIn($rateLimitKey);
+                $minutes = ceil($seconds / 60);
+                
+                Log::warning('Rate limit exceeded', [
+                    'email' => $request->email,
+                    'event_id' => $id,
+                    'retry_after' => $seconds
                 ]);
                 
-                if ($user->isBanned()) {
-                    return response()->json([
-                        'message' => 'You are temporarily banned from event registration due to penalties',
-                        'banned_until' => $user->banned_until->format('M d, Y'),
-                        'penalties' => $user->penalties,
-                        'days_remaining' => $user->getRemainingBanDays()
-                    ], 403);
-                } else {
-                    return response()->json([
-                        'message' => 'You cannot register for events due to multiple penalties',
-                        'penalties' => $user->penalties,
-                        'penalty_expires_at' => $user->penalty_expires_at
-                    ], 403);
+                return response()->json([
+                    'message' => 'You have reached the maximum registration limit (5 per hour). Please try again in ' . $minutes . ' minutes.',
+                    'retry_after' => $seconds
+                ], 429);
+            }
+            
+            RateLimiter::hit($rateLimitKey, 3600); // 1 hour window
+
+            Log::info('Registration attempt', [
+                'event_id' => $id,
+                'email' => $request->email,
+                'name' => $request->name,
+                'all_request_data' => $request->all()
+            ]);
+
+            // 1. Validate request data
+            $request->validate([
+                'email' => 'required|email',
+                'name' => 'required|string'
+            ]);
+
+            // 2. Find the event - ensure ID is integer
+            $event = Event::find((int)$id);
+            if (!$event) {
+                Log::warning('Event not found', ['event_id' => $id]);
+                return response()->json(['message' => 'Event not found'], 404);
+            }
+
+            // 3. Find the user
+            $user = User::where('email', $request->email)->first();
+            if (!$user) {
+                Log::warning('User not found', ['email' => $request->email]);
+                return response()->json(['message' => 'User not found'], 404);
+            }
+
+            Log::info('User found', ['user_id' => $user->id, 'email' => $user->email]);
+
+            // 4. Check if already registered (only active registrations)
+            $existingRegistration = Registration::where('event_id', (int)$id)
+                ->where('email', $request->email)
+                ->where('status', 'registered')
+                ->first();
+
+            if ($existingRegistration) {
+                Log::warning('User already registered', [
+                    'event_id' => $id,
+                    'email' => $request->email,
+                    'registration_id' => $existingRegistration->id
+                ]);
+                return response()->json([
+                    'message' => 'User already registered for this event',
+                    'registration_id' => $existingRegistration->id
+                ], 400);
+            }
+
+            // 5. Check for any existing cancelled registration
+            $cancelledRegistration = Registration::where('event_id', (int)$id)
+                ->where('email', $request->email)
+                ->where('status', 'cancelled')
+                ->first();
+
+            if ($cancelledRegistration) {
+                Log::info('Found cancelled registration, re-activating', [
+                    'registration_id' => $cancelledRegistration->id
+                ]);
+                
+                // Reactivate the cancelled registration
+                $cancelledRegistration->update([
+                    'status' => 'registered',
+                    'cancellation_reason' => null,
+                    'cancelled_at' => null
+                ]);
+
+                return response()->json([
+                    'message' => 'Registration re-activated successfully',
+                    'registration_id' => $cancelledRegistration->id
+                ]);
+            }
+
+            // 6. Check if user can register (penalty/ban check) - with better logging
+            if (method_exists($user, 'canRegisterForEvents')) {
+                if (!$user->canRegisterForEvents()) {
+                    Log::warning('User cannot register due to penalties/ban', [
+                        'user_id' => $user->id,
+                        'penalties' => $user->penalties ?? 'N/A',
+                        'banned_until' => $user->banned_until ?? 'N/A'
+                    ]);
+                    
+                    if ($user->isBanned()) {
+                        return response()->json([
+                            'message' => 'You are temporarily banned from event registration due to penalties',
+                            'banned_until' => $user->banned_until->format('M d, Y'),
+                            'penalties' => $user->penalties,
+                            'days_remaining' => $user->getRemainingBanDays()
+                        ], 403);
+                    } else {
+                        return response()->json([
+                            'message' => 'You cannot register for events due to multiple penalties',
+                            'penalties' => $user->penalties,
+                            'penalty_expires_at' => $user->penalty_expires_at
+                        ], 403);
+                    }
                 }
             }
+
+            // 7. Create new registration
+            $registration = Registration::create([
+                'event_id' => (int)$id,
+                'user_id' => $user->id,
+                'name' => $request->name,
+                'email' => $request->email,
+                'attendance' => 'pending',
+                'status' => 'registered',
+                'registered_at' => now()
+            ]);
+
+            Log::info('Registration created successfully', [
+                'registration_id' => $registration->id,
+                'user_id' => $user->id,
+                'event_id' => $event->id
+            ]);
+
+            // 8. Return success with the updated event data
+            $updatedEvent = Event::with(['registrations' => function($query) {
+                $query->where('status', 'registered');
+            }])->find($event->id);
+
+            return response()->json([
+                'message' => 'User registered successfully',
+                'registration_id' => $registration->id,
+                'event' => $updatedEvent
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Registration error', [
+                'event_id' => $id,
+                'email' => $request->email,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Registration failed: ' . $e->getMessage()
+            ], 500);
         }
-
-        // 7. Create new registration
-        $registration = Registration::create([
-            'event_id' => (int)$id,
-            'user_id' => $user->id,
-            'name' => $request->name,
-            'email' => $request->email,
-            'attendance' => 'pending',
-            'status' => 'registered',
-            'registered_at' => now()
-        ]);
-
-        Log::info('Registration created successfully', [
-            'registration_id' => $registration->id,
-            'user_id' => $user->id,
-            'event_id' => $event->id
-        ]);
-
-        // 8. Return success with the updated event data
-        $updatedEvent = Event::with(['registrations' => function($query) {
-            $query->where('status', 'registered');
-        }])->find($event->id);
-
-        return response()->json([
-            'message' => 'User registered successfully',
-            'registration_id' => $registration->id,
-            'event' => $updatedEvent
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error('Registration error', [
-            'event_id' => $id,
-            'email' => $request->email,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return response()->json([
-            'message' => 'Registration failed: ' . $e->getMessage()
-        ], 500);
     }
-}
    
     public function unregister($id, Request $request)
 {

@@ -111,63 +111,55 @@ export default function Profile({ currentUser, onLogout }) {
     window.location.href = "/";
   };
 
-  const getPenaltyStatus = () => {
-    // Check if user is currently banned
-    const isBanned = userStats.banned_until && new Date(userStats.banned_until) > new Date();
-    
-    // Calculate remaining penalty days
-    const penaltyExpiresIn = userStats.penalty_expires_at ? 
-      Math.ceil((new Date(userStats.penalty_expires_at) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+ const getPenaltyStatus = () => {
+  // Check if user is currently banned
+  const isBanned = userStats.banned_until && new Date(userStats.banned_until) > new Date();
+  
+  // Calculate remaining penalty days
+  const penaltyExpiresIn = userStats.penalty_expires_at ? 
+    Math.ceil((new Date(userStats.penalty_expires_at) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
-    if (isBanned) {
-      const banDays = Math.ceil((new Date(userStats.banned_until) - new Date()) / (1000 * 60 * 60 * 24));
-      return { 
-        status: "Banned", 
-        color: "#ff5252", 
-        message: `You are banned from event registration for ${banDays} more days`,
-        details: `Ban lifts on ${new Date(userStats.banned_until).toLocaleDateString()}`,
-        warning: `You have ${userStats.penalties}/3 penalties`
-      };
-    }
-    
-    // If not banned, check penalty count
-    if (userStats.penalties >= 3) {
-      return { 
-        status: "Banned", 
-        color: "#ff5252", 
-        message: "You have 3 penalties and are banned from event registration",
-        details: `Penalties expire in ${penaltyExpiresIn} days`,
-        warning: "Contact admin to remove penalties"
-      };
-    }
-    if (userStats.penalties >= 2) {
-      return { 
-        status: "High Risk", 
-        color: "#ff9800", 
-        message: "One more penalty will result in a 30-day ban",
-        details: `Penalties expire in ${penaltyExpiresIn} days`,
-        warning: `You have ${userStats.penalties}/3 penalties`
-      };
-    }
-    if (userStats.penalties >= 1) {
-      return { 
-        status: "Warning", 
-        color: "#ffca28", 
-        message: "Be careful with event attendance",
-        details: `Penalties expire in ${penaltyExpiresIn} days`,
-        warning: `You have ${userStats.penalties}/3 penalties`
-      };
-    }
+  if (isBanned) {
+    const banDays = Math.ceil((new Date(userStats.banned_until) - new Date()) / (1000 * 60 * 60 * 24));
     return { 
-      status: "Good Standing", 
-      color: "#4caf50", 
-      message: "No penalties on record",
-      details: "Keep up the good attendance!",
-      warning: ""
+      status: "🚫 Banned", 
+      color: "#ff5252", 
+      message: `You are banned from event registration for ${banDays} more days`,
+      details: `Ban lifts on ${new Date(userStats.banned_until).toLocaleDateString()}`,
+      warning: `You have ${userStats.penalties}/3 penalties`
     };
+  }
+  
+  if (userStats.penalties >= 3) {
+    return { 
+      status: "⚠️ Restricted", 
+      color: "#ff9800", 
+      message: "You have 3 penalties and are restricted from event registration",
+      details: `Penalties expire in ${penaltyExpiresIn} days`,
+      warning: "Contact admin to remove penalties"
+    };
+  }
+  
+  if (userStats.penalties > 0) {
+    return { 
+      status: "⚠️ Warning", 
+      color: "#ffca28", 
+      message: "Be careful with event attendance",
+      details: `Penalties expire in ${penaltyExpiresIn} days`,
+      warning: `You have ${userStats.penalties}/3 penalties`
+    };
+  }
+  
+  return { 
+    status: "✅ Clean", 
+    color: "#4caf50", 
+    message: "No penalties on record",
+    details: "Keep up the good attendance!",
+    warning: ""
   };
+};
 
-  const penaltyStatus = getPenaltyStatus();
+const penaltyStatus = getPenaltyStatus();
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Not provided';

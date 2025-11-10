@@ -7,8 +7,6 @@ import Swal from 'sweetalert2';
 export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
-  const [lastActionTime, setLastActionTime] = useState(0);
-  const [actionCount, setActionCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedTitles, setExpandedTitles] = useState({});
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -59,7 +57,13 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     return categoryImages["Other"] || "/images/other.jpg";
   };
 
-  // Load user feedback from localStorage
+  const getUserBarangay = () => {
+    return currentUser?.barangay || 
+           currentUser?.location || 
+           currentUser?.address?.barangay || 
+           'Unknown';
+  };
+
   useEffect(() => {
     const loadUserFeedback = () => {
       const feedbackMap = {};
@@ -77,7 +81,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     }
   }, [events, currentUser]);
 
-  // Toggle title expansion
   const toggleTitleExpansion = (eventId, e) => {
     e?.stopPropagation();
     setExpandedTitles(prev => ({
@@ -86,39 +89,12 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     }));
   };
 
-  // Toggle feedback expansion
   const toggleFeedbackExpansion = (eventId, e) => {
     e?.stopPropagation();
     setExpandedFeedback(prev => ({
       ...prev,
       [eventId]: !prev[eventId]
     }));
-  };
-
-  // Rate limiting
-  const canPerformAction = () => {
-    const now = Date.now();
-    const timeDiff = now - lastActionTime;
-    
-    if (timeDiff > 60000) {
-      setActionCount(0);
-      setLastActionTime(now);
-      return true;
-    }
-    
-    if (actionCount >= 5) {
-      Swal.fire({
-        title: 'Action Limit Reached',
-        text: 'Please wait a minute before performing more actions.',
-        icon: 'warning',
-        confirmButtonColor: '#4FC3F7'
-      });
-      return false;
-    }
-    
-    setActionCount(prev => prev + 1);
-    setLastActionTime(now);
-    return true;
   };
 
   useEffect(() => {
@@ -187,7 +163,19 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
 
   const barangayGroups = groupEventsByBarangay();
 
-  // Event Details Modal Functions
+  const getSortedBarangays = (groups) => {
+    const userBarangay = getUserBarangay();
+    const barangays = Object.keys(groups);
+    
+    return barangays.sort((a, b) => {
+      if (a === userBarangay) return -1;
+      if (b === userBarangay) return 1;
+      return a.localeCompare(b);
+    });
+  };
+
+  const sortedBarangays = getSortedBarangays(barangayGroups);
+
   const openEventDetails = (event) => {
     setSelectedEvent(event);
   };
@@ -196,11 +184,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     setSelectedEvent(null);
   };
 
-  // Feedback Modal Functions
   const openFeedbackModal = (event) => {
-    if (!canPerformAction()) return;
-    
-    // Check if user already gave feedback
     if (userFeedback[event.id]) {
       Swal.fire({
         title: 'Feedback Already Submitted',
@@ -246,7 +230,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
-      // Save feedback to localStorage and state
       const feedbackData = {
         event_id: selectedEvent.id,
         rating: feedbackRating,
@@ -273,7 +256,6 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
       console.error('Error submitting feedback:', err);
       
       if (err.response?.status === 409) {
-        // User already submitted feedback - update local state
         const feedbackData = {
           event_id: selectedEvent.id,
           rating: feedbackRating,
@@ -473,8 +455,7 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     });
   };
 
-  // Add this function to UserDashboard, UpcomingEvents, and EventsParticipate components
-const getProfilePicture = () => {
+  const getProfilePicture = () => {
   if (!currentUser) return generateDefaultAvatar('User');
   
   const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
@@ -492,13 +473,11 @@ const generateDefaultAvatar = (name) => {
 
   const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null, e) => {
     e?.stopPropagation();
-    if (!canPerformAction()) return;
 
     try {
       const token = localStorage.getItem('token');
       const event = events.find((e) => e.id === eventId);
       
-      // FIXED: Handle cases where registrations might be undefined
       const isRegistered = event.registrations && Array.isArray(event.registrations)
         ? event.registrations.some(r => r.email === currentUser.email)
         : false;
@@ -540,23 +519,31 @@ const generateDefaultAvatar = (name) => {
 
     } catch (err) {
       console.error('Error:', err.response?.data || err.message);
-      Swal.fire({
-        title: 'Error',
-        text: err.response?.data?.message || 'Operation failed',
-        icon: 'error',
-        confirmButtonColor: '#4FC3F7'
-      });
+      
+      if (err.response?.status === 429) {
+        Swal.fire({
+          title: 'Registration Limit Reached',
+          text: err.response?.data?.message || 'Too many registration attempts.',
+          icon: 'warning',
+          confirmButtonColor: '#4FC3F7'
+        });
+      } else {
+        Swal.fire({
+          title: 'Error',
+          text: err.response?.data?.message || 'Operation failed',
+          icon: 'error',
+          confirmButtonColor: '#4FC3F7'
+        });
+      }
     }
   };
 
-  // Function to check if feedback comment needs expansion
   const needsFeedbackExpansion = (comment, eventId) => {
     if (!comment) return false;
     const isExpanded = expandedFeedback[eventId];
     return comment.length > 100 && !isExpanded;
   };
 
-  // Function to get truncated feedback comment
   const getTruncatedFeedback = (comment, eventId) => {
     if (!comment) return '';
     const isExpanded = expandedFeedback[eventId];
@@ -653,15 +640,21 @@ const generateDefaultAvatar = (name) => {
           </div>
         ) : (
           <div className="events-container">
-            {Object.keys(barangayGroups).map(barangay => (
+            {sortedBarangays.map(barangay => (
               <div key={barangay} className="barangay-group">
                 <div className="barangay-header">
-                  {barangay} ({barangayGroups[barangay].length} events)
+                  {barangay === getUserBarangay() ? (
+                    <>
+                      <span className="user-barangay-badge">Your Barangay</span>
+                      {barangay} ({barangayGroups[barangay].length} events)
+                    </>
+                  ) : (
+                    `${barangay} (${barangayGroups[barangay].length} events)`
+                  )}
                 </div>
                 <div className="event-card-container">
                   {barangayGroups[barangay].map(event => {
                     const status = getEventStatus(event);
-                    // FIXED: Handle cases where registrations might be undefined
                     const isRegistered = event.registrations && Array.isArray(event.registrations)
                       ? event.registrations.some(r => r.email === currentUser.email)
                       : false;
@@ -769,7 +762,6 @@ const generateDefaultAvatar = (name) => {
         )}
       </div>
 
-      {/* Event Details Modal */}
       {selectedEvent && !feedbackModalOpen && (
         <div className="modal-overlay" onClick={closeEventDetails}>
           <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>
@@ -832,7 +824,6 @@ const generateDefaultAvatar = (name) => {
                   {getEventStatus(selectedEvent) === "upcoming" && (
                     <button
                       onClick={() => {
-                        // FIXED: Handle cases where registrations might be undefined
                         const isRegistered = selectedEvent.registrations && Array.isArray(selectedEvent.registrations)
                           ? selectedEvent.registrations.some(r => r.email === currentUser.email)
                           : false;
@@ -893,7 +884,6 @@ const generateDefaultAvatar = (name) => {
         </div>
       )}
 
-      {/* Feedback Modal */}
       {feedbackModalOpen && selectedEvent && (
         <div className="modal-overlay" onClick={closeFeedbackModal}>
           <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
