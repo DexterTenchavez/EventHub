@@ -665,8 +665,11 @@ export default function Userspenalties({ currentUser, onLogout }) {
           <li>
             <Link to="/admin-dashboard" onClick={handleNavClick}>🏠 Home</Link>
           </li>
+           <li>
+            <Link to="/announcements" onClick={handleNavClick}>📢 Announcement</Link>
+          </li>
           <li className="penalty-currentpage">
-            <Link to="/users-penalties" onClick={handleNavClick}>👥 Users & Penalties</Link>
+            <Link to="/users-penalties" onClick={handleNavClick}>👥⚠️ Users & Penalties</Link>
           </li>
         </ul>
       </div>

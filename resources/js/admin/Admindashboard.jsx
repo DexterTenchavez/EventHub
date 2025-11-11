@@ -886,6 +886,9 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
           <li className="currentpages">
             <Link to="/admin-dashboard" onClick={handleNavClick}>🏠 Home</Link>
           </li>
+           <li>
+            <Link to="/announcements" onClick={handleNavClick}>📢 Announcement</Link>
+          </li>
           <li>
             <Link to="/users-penalties" onClick={handleNavClick}>👥⚠️ Users & Penalties</Link>
           </li>

@@ -15,11 +15,13 @@ class Notification extends Model
         'message',
         'event_id',
         'is_read',
-        'type'
+        'type',
+        'is_announcement' // Add this field
     ];
 
     protected $casts = [
         'is_read' => 'boolean',
+        'is_announcement' => 'boolean', // Add this cast
     ];
 
     public function user()
@@ -30,5 +32,17 @@ class Notification extends Model
     public function event()
     {
         return $this->belongsTo(Event::class);
+    }
+
+    // Scope for announcements
+    public function scopeAnnouncements($query)
+    {
+        return $query->where('is_announcement', true);
+    }
+
+    // Scope for event notifications
+    public function scopeEventNotifications($query)
+    {
+        return $query->where('is_announcement', false);
     }
 }

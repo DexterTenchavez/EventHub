@@ -8,19 +8,15 @@ import Login from "./authentication/Login";
 import ForgotPassword from './authentication/ForgotPassword';
 import ResetPassword from './authentication/ResetPassword';
 
-
 import Admindashboard from "./admin/Admindashboard";
 import Userspenalties from "./admin/Userspenalties";
-
-
+import Announcements from './admin/Announcements'; // Make sure this path is correct
 
 import Userdashboard from "./user/Userdashboard";
 import EventsParticipate from "./user/EventsParticipate";
 import Upcomingevents from "./user/Upcomingevents";
 import Profile from "./user/Profile";
 import Notifications from "./user/Notifications";
-
-
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -66,6 +62,7 @@ const useGlobalEventNotifications = (currentUser, location) => {
       '/forgot-password',
       '/reset-password',
       '/admin-dashboard',
+      '/announcements', // Updated path
       '/users-penalties'
     ];
 
@@ -260,6 +257,25 @@ const AppContent = ({ currentUser, events, setEvents, handleLogout, setCurrentUs
         }
       />
 
+      {/* NEW: Announcements Route */}
+      <Route 
+        path="/announcements" 
+        element={
+          currentUser ? (
+            currentUser.role === "admin" ? (
+              <Announcements 
+                currentUser={currentUser} 
+                onLogout={handleLogout} 
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } 
+      />
+
       <Route 
         path="/users-penalties" 
         element={
@@ -277,11 +293,6 @@ const AppContent = ({ currentUser, events, setEvents, handleLogout, setCurrentUs
           )
         } 
       />
-
-
-
-
-
 
       {/* User Routes */}
       <Route
@@ -368,8 +379,6 @@ const AppContent = ({ currentUser, events, setEvents, handleLogout, setCurrentUs
           )
         } 
       />
-
-     
     </Routes>
   );
 };

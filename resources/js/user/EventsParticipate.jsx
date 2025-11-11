@@ -193,11 +193,11 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   const getAttendanceBadge = (attendance) => {
     switch (attendance) {
       case 'present':
-        return <span className="attendance-badge present">Present</span>;
+        return <span className="events-participate-attendance-badge events-participate-present">Present</span>;
       case 'absent':
-        return <span className="attendance-badge absent">Absent</span>;
+        return <span className="events-participate-attendance-badge events-participate-absent">Absent</span>;
       default:
-        return <span className="attendance-badge pending">Pending</span>;
+        return <span className="events-participate-attendance-badge events-participate-pending">Pending</span>;
     }
   };
 
@@ -394,109 +394,109 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
   if (!currentUser) return <p>Loading...</p>;
 
   return (
-    <div>
-      <div className="user-topbar">
+    <div className="events-participate-body">
+      <div className="events-participate-topbar">
         <button 
-          className="mobile-menu-btn"
+          className="events-participate-mobile-menu-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           ☰
         </button>
-        <div className="logo-title-container">
+        <div className="events-participate-logo-title-container">
           <img 
             src="/images/logo.jpg" 
             alt="EventHub Logo" 
-            className="topbar-logo"
+            className="events-participate-topbar-logo"
           />
-          <h3 className="title">EventHub</h3>
+          <h3 className="events-participate-title">EventHub</h3>
         </div>
-        <div className="topbar-right">
-          <Link to="/notifications" className="notification-link" onClick={handleNavClick}>
-            <span className="notification-icon">🔔</span>
+        <div className="events-participate-topbar-right">
+          <Link to="/notifications" className="events-participate-notification-link" onClick={handleNavClick}>
+            <span className="events-participate-notification-icon">🔔</span>
             {notificationCount > 0 && (
-              <span className="notification-badge">{notificationCount}</span>
+              <span className="events-participate-notification-badge">{notificationCount}</span>
             )}
           </Link>
-          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+          <Link to="/profile" className="events-participate-profile-link" onClick={handleNavClick}>
             <img 
               src={getProfilePicture()} 
               alt="Profile" 
-              className="profile-picture-icon"
+              className="events-participate-profile-picture-icon"
             />
           </Link>
         </div>
       </div>
 
-      <div className={`user-sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+      <div className={`events-participate-sidebar ${mobileMenuOpen ? 'events-participate-mobile-open' : ''}`}>
         <ul>
           <li><Link to="/user-dashboard" onClick={handleNavClick}>🏠 Home</Link></li>
           <li><Link to="/upcoming-events" onClick={handleNavClick}>📅 Upcoming Events</Link></li>
-          <li className="user-currentpage"><Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link></li>
+          <li className="events-participate-currentpage"><Link to="/past-events" onClick={handleNavClick}>📚 My Events History</Link></li>
         </ul>
       </div>
 
       {mobileMenuOpen && (
         <div 
-          className="mobile-overlay"
+          className="events-participate-mobile-overlay"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      <div className="user-content">
+      <div className="events-participate-content">
         <h1>My Events History</h1>
-        <p className="page-description">Here you can see all the events you've participated in and your attendance status.</p>
+        <p className="events-participate-page-description">Here you can see all the events you've participated in and your attendance status.</p>
         
         {participationHistory.length === 0 ? (
-          <div className="empty-state">
+          <div className="events-participate-empty-state">
             <h3>No Event History</h3>
             <p>You haven't participated in any events yet. Register for upcoming events to build your history!</p>
-            <Link to="/upcoming-events" className="browse-events-btn">
+            <Link to="/upcoming-events" className="events-participate-browse-events-btn">
               Browse Upcoming Events
             </Link>
           </div>
         ) : (
-          <div className="participation-container">
-            <div className="stats-summary">
+          <div className="events-participate-container">
+            <div className="events-participate-stats-summary">
               <div 
-                className={`stat-card ${isStatCardActive('all') ? 'active' : ''}`}
+                className={`events-participate-stat-card ${isStatCardActive('all') ? 'events-participate-active' : ''}`}
                 onClick={() => handleStatCardClick('all')}
               >
                 <h3>Total Events</h3>
-                <p className="stat-number">{getStatusCount('all')}</p>
-                {isStatCardActive('all') && <div className="stat-indicator">✓</div>}
+                <p className="events-participate-stat-number">{getStatusCount('all')}</p>
+                {isStatCardActive('all') && <div className="events-participate-indicator">✓</div>}
               </div>
               <div 
-                className={`stat-card present ${isStatCardActive('present') ? 'active' : ''}`}
+                className={`events-participate-stat-card events-participate-present ${isStatCardActive('present') ? 'events-participate-active' : ''}`}
                 onClick={() => handleStatCardClick('present')}
               >
                 <h3>Present</h3>
-                <p className="stat-number">{getStatusCount('present')}</p>
-                {isStatCardActive('present') && <div className="stat-indicator">✓</div>}
+                <p className="events-participate-stat-number">{getStatusCount('present')}</p>
+                {isStatCardActive('present') && <div className="events-participate-indicator">✓</div>}
               </div>
               <div 
-                className={`stat-card absent ${isStatCardActive('absent') ? 'active' : ''}`}
+                className={`events-participate-stat-card events-participate-absent ${isStatCardActive('absent') ? 'events-participate-active' : ''}`}
                 onClick={() => handleStatCardClick('absent')}
               >
                 <h3>Absent</h3>
-                <p className="stat-number">{getStatusCount('absent')}</p>
-                {isStatCardActive('absent') && <div className="stat-indicator">✓</div>}
+                <p className="events-participate-stat-number">{getStatusCount('absent')}</p>
+                {isStatCardActive('absent') && <div className="events-participate-indicator">✓</div>}
               </div>
               <div 
-                className={`stat-card pending ${isStatCardActive('pending') ? 'active' : ''}`}
+                className={`events-participate-stat-card events-participate-pending ${isStatCardActive('pending') ? 'events-participate-active' : ''}`}
                 onClick={() => handleStatCardClick('pending')}
               >
                 <h3>Pending</h3>
-                <p className="stat-number">{getStatusCount('pending')}</p>
-                {isStatCardActive('pending') && <div className="stat-indicator">✓</div>}
+                <p className="events-participate-stat-number">{getStatusCount('pending')}</p>
+                {isStatCardActive('pending') && <div className="events-participate-indicator">✓</div>}
               </div>
             </div>
 
             {/* Filter indicator */}
             {filterStatus !== 'all' && (
-              <div className="filter-indicator">
+              <div className="events-participate-filter-indicator">
                 <span>Showing: {filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1)} events </span>
                 <button 
-                  className="clear-filter-btn"
+                  className="events-participate-clear-filter-btn"
                   onClick={() => setFilterStatus('all')}
                 >
                   Show All
@@ -504,13 +504,13 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
               </div>
             )}
 
-            <div className="history-list">
+            <div className="events-participate-history-list">
               {filteredEvents.length === 0 ? (
-                <div className="empty-filter-state">
+                <div className="events-participate-empty-filter-state">
                   <h3>No {filterStatus} events found</h3>
                   <p>You don't have any events with {filterStatus} status.</p>
                   <button 
-                    className="clear-filter-btn"
+                    className="events-participate-clear-filter-btn"
                     onClick={() => setFilterStatus('all')}
                   >
                     Show All Events
@@ -526,27 +526,27 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                   return (
                     <div 
                       key={item.eventId} 
-                      className="participation-card clickable"
+                      className="events-participate-card events-participate-clickable"
                       onClick={() => openEventDetails(item)}
                     >
                       {/* Event Image */}
                       <div 
-                        className="event-card-image"
+                        className="events-participate-event-card-image"
                         style={{
                           backgroundImage: `url(${categoryImage})`
                         }}
                       ></div>
                       
-                      <div className="event-card-content">
-                        <div className="card-header">
+                      <div className="events-participate-event-card-content">
+                        <div className="events-participate-card-header">
                           {/* Event Title with See More functionality */}
-                          <div className="event-card-title-container">
-                            <h3 className={`event-card-title ${isTitleExpanded ? 'expanded' : ''}`}>
+                          <div className="events-participate-event-card-title-container">
+                            <h3 className={`events-participate-event-card-title ${isTitleExpanded ? 'events-participate-expanded' : ''}`}>
                               {item.eventTitle}
                             </h3>
                             {needsSeeMore && (
                               <button
-                                className="see-more-btn"
+                                className="events-participate-see-more-btn"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   toggleTitleExpansion(item.eventId);
@@ -559,7 +559,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                           {getAttendanceBadge(item.attendance)}
                         </div>
                         
-                        <div className="card-details">
+                        <div className="events-participate-card-details">
                           <p><strong>Category:</strong> {item.eventCategory}</p>
                           <p><strong>Date:</strong> {new Date(item.eventDate).toLocaleDateString('en-US', {
                             year: 'numeric',
@@ -568,14 +568,14 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                           })}</p>
                           <p><strong>Location:</strong> {item.eventLocation}</p>
                           
-                          <div className="event-description-container">
-                            <div className="event-description-label">Description:</div>
-                            <div className="event-description-scroll">
-                              <p className="event-description-text">{item.eventDescription}</p>
+                          <div className="events-participate-event-description-container">
+                            <div className="events-participate-event-description-label">Description:</div>
+                            <div className="events-participate-event-description-scroll">
+                              <p className="events-participate-event-description-text">{item.eventDescription}</p>
                             </div>
                           </div>
                           
-                          <div className="participation-details">
+                          <div className="events-participate-participation-details">
                             <p><strong>Your Status:</strong> 
                               <span style={{ color: getAttendanceColor(item.attendance), fontWeight: 'bold', marginLeft: '8px' }}>
                                 {item.attendance.charAt(0).toUpperCase() + item.attendance.slice(1)}
@@ -588,8 +588,8 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
 
                             {/* Feedback Status */}
                             {hasGivenFeedback ? (
-                              <div className="feedback-submitted">
-                                <span className="feedback-check">✅</span>
+                              <div className="events-participate-feedback-submitted">
+                                <span className="events-participate-feedback-check">✅</span>
                                 <span>Feedback Submitted</span>
                               </div>
                             ) : (
@@ -600,7 +600,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                                     e.stopPropagation();
                                     openFeedbackModal(item);
                                   }}
-                                  className="feedback-btn"
+                                  className="events-participate-feedback-btn"
                                 >
                                   📝 Give Feedback
                                 </button>
@@ -620,28 +620,28 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
 
       {/* Event Details Modal */}
       {selectedEvent && !feedbackModalOpen && (
-        <div className="modal-overlay" onClick={closeEventDetails}>
-          <div className="event-details-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="events-participate-modal-overlay" onClick={closeEventDetails}>
+          <div className="events-participate-event-details-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="events-participate-modal-header">
               <h2>{selectedEvent.eventTitle}</h2>
-              <button className="close-btn" onClick={closeEventDetails}>×</button>
+              <button className="events-participate-close-btn" onClick={closeEventDetails}>×</button>
             </div>
             
-            <div className="modal-content">
-              <div className="modal-image">
+            <div className="events-participate-modal-content">
+              <div className="events-participate-modal-image">
                 <img 
                   src={getCategoryImage(selectedEvent.eventCategory)} 
                   alt={selectedEvent.eventCategory}
                 />
               </div>
               
-              <div className="modal-details">
-                <div className="detail-row">
+              <div className="events-participate-modal-details">
+                <div className="events-participate-detail-row">
                   <strong>Category:</strong>
                   <span>{selectedEvent.eventCategory}</span>
                 </div>
                 
-                <div className="detail-row">
+                <div className="events-participate-detail-row">
                   <strong>Date:</strong>
                   <span>{new Date(selectedEvent.eventDate).toLocaleDateString('en-US', {
                     year: 'numeric',
@@ -651,12 +651,12 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                   })}</span>
                 </div>
                 
-                <div className="detail-row">
+                <div className="events-participate-detail-row">
                   <strong>Location:</strong>
                   <span>{selectedEvent.eventLocation}</span>
                 </div>
                 
-                <div className="detail-row">
+                <div className="events-participate-detail-row">
                   <strong>Attendance Status:</strong>
                   <span style={{ color: getAttendanceColor(selectedEvent.attendance), fontWeight: 'bold' }}>
                     {selectedEvent.attendance.charAt(0).toUpperCase() + selectedEvent.attendance.slice(1)}
@@ -664,35 +664,35 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                 </div>
                 
                 {selectedEvent.registeredAt && (
-                  <div className="detail-row">
+                  <div className="events-participate-detail-row">
                     <strong>Registered On:</strong>
                     <span>{new Date(selectedEvent.registeredAt).toLocaleDateString()}</span>
                   </div>
                 )}
                 
-                <div className="detail-row full-width">
+                <div className="events-participate-detail-row events-participate-full-width">
                   <strong>Description:</strong>
-                  <div className="modal-description">
+                  <div className="events-participate-modal-description">
                     {selectedEvent.eventDescription}
                   </div>
                 </div>
 
                 {/* Feedback Section in Modal */}
                 {userFeedback[selectedEvent.eventId] ? (
-                  <div className="detail-row full-width">
+                  <div className="events-participate-detail-row events-participate-full-width">
                     <strong>Your Feedback:</strong>
-                    <div className="feedback-submitted-modal">
-                      <div className="feedback-header">
-                        <span className="feedback-check">✅</span>
+                    <div className="events-participate-feedback-submitted-modal">
+                      <div className="events-participate-feedback-header">
+                        <span className="events-participate-feedback-check">✅</span>
                         <span>Rating: {userFeedback[selectedEvent.eventId].rating}★</span>
                       </div>
                       {userFeedback[selectedEvent.eventId].comment && (
-                        <div className="feedback-comment-container-modal">
-                          <div className="feedback-comment-preview-modal">
+                        <div className="events-participate-feedback-comment-container-modal">
+                          <div className="events-participate-feedback-comment-preview-modal">
                             <p><strong>Your comment:</strong> "{getTruncatedFeedback(userFeedback[selectedEvent.eventId].comment, selectedEvent.eventId)}"</p>
                             {needsFeedbackExpansion(userFeedback[selectedEvent.eventId].comment, selectedEvent.eventId) && (
                               <button
-                                className="feedback-see-more-btn"
+                                className="events-participate-feedback-see-more-btn"
                                 onClick={(e) => toggleFeedbackExpansion(selectedEvent.eventId, e)}
                               >
                                 {expandedFeedback[selectedEvent.eventId] ? 'See Less' : 'See More'}
@@ -706,14 +706,14 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                 ) : (
                   // Only show feedback button for past events where user was present
                   selectedEvent.attendance === 'present' && (
-                    <div className="detail-row full-width">
+                    <div className="events-participate-detail-row events-participate-full-width">
                       <strong>Give Feedback:</strong>
                       <button
                         onClick={() => {
                           closeEventDetails();
                           openFeedbackModal(selectedEvent);
                         }}
-                        className="feedback-btn"
+                        className="events-participate-feedback-btn"
                       >
                         📝 Give Feedback
                       </button>
@@ -728,33 +728,33 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
 
       {/* Feedback Modal */}
       {feedbackModalOpen && selectedEvent && (
-        <div className="modal-overlay" onClick={closeFeedbackModal}>
-          <div className="feedback-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="events-participate-modal-overlay" onClick={closeFeedbackModal}>
+          <div className="events-participate-feedback-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="events-participate-modal-header">
               <h2>Event Feedback</h2>
-              <button className="close-btn" onClick={closeFeedbackModal}>×</button>
+              <button className="events-participate-close-btn" onClick={closeFeedbackModal}>×</button>
             </div>
             
-            <div className="feedback-content">
-              <div className="event-info">
+            <div className="events-participate-feedback-content">
+              <div className="events-participate-event-info">
                 <h3>{selectedEvent.eventTitle}</h3>
                 <p>{selectedEvent.eventCategory} • {new Date(selectedEvent.eventDate).toLocaleDateString()}</p>
               </div>
               
-              <div className="rating-section">
+              <div className="events-participate-rating-section">
                 <label>How would you rate this event?</label>
-                <div className="star-rating">
+                <div className="events-participate-star-rating">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <span
                       key={star}
-                      className={`star ${star <= feedbackRating ? 'active' : ''}`}
+                      className={`events-participate-star ${star <= feedbackRating ? 'events-participate-active' : ''}`}
                       onClick={() => handleStarClick(star)}
                     >
                       ★
                     </span>
                   ))}
                 </div>
-                <p className="rating-text">
+                <p className="events-participate-rating-text">
                   {feedbackRating === 0 && 'Select a rating'}
                   {feedbackRating === 1 && 'Poor'}
                   {feedbackRating === 2 && 'Fair'}
@@ -764,7 +764,7 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                 </p>
               </div>
               
-              <div className="comment-section">
+              <div className="events-participate-comment-section">
                 <label>Your Comments (Optional):</label>
                 <textarea
                   value={feedbackComment}
@@ -774,11 +774,11 @@ export default function EventsParticipate({ events = [], currentUser, onLogout }
                 />
               </div>
               
-              <div className="feedback-actions">
-                <button onClick={closeFeedbackModal} className="cancel-btn">
+              <div className="events-participate-feedback-actions">
+                <button onClick={closeFeedbackModal} className="events-participate-cancel-btn">
                   Cancel
                 </button>
-                <button onClick={submitFeedback} className="submit-feedback-btn">
+                <button onClick={submitFeedback} className="events-participate-submit-feedback-btn">
                   Submit Feedback
                 </button>
               </div>

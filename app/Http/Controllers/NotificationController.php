@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Notification;
 use Illuminate\Http\Request;
+use App\Models\User;
+use App\Mail\AnnouncementNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class NotificationController extends Controller
 {
@@ -223,6 +226,102 @@ class NotificationController extends Controller
 
     } catch (\Exception $e) {
         Log::error('Error creating event notification: ' . $e->getMessage());
+        return response()->json(['message' => 'Internal server error'], 500);
+    }
+}
+
+
+public function createAnnouncement(Request $request)
+{
+    try {
+        $admin = Auth::user();
+        
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string',
+            'type' => 'required|string|in:info,warning,success,emergency', // ADD 'emergency' HERE
+            'target_users' => 'required|string|in:all,specific_barangay',
+            'barangay' => 'required_if:target_users,specific_barangay|string'
+        ]);
+
+        // Get all users or specific barangay users - ONLY REGULAR USERS
+        if ($validated['target_users'] === 'all') {
+            $users = User::where('role', 'user')->get();
+        } else {
+            $barangay = $validated['barangay'];
+            $users = User::where('barangay', $barangay)
+                        ->where('role', 'user')
+                        ->get();
+        }
+
+        // Check if there are users to send to
+        if ($users->isEmpty()) {
+            return response()->json([
+                'message' => 'No users found to send announcement to',
+                'sent_to' => 0
+            ], 200);
+        }
+
+        $notifications = [];
+        $emailData = [
+            'title' => $validated['title'],
+            'message' => $validated['message'],
+            'type' => $validated['type']
+        ];
+
+        $sentEmails = 0;
+        $failedEmails = [];
+
+        foreach ($users as $user) {
+            // Create notification in database
+            $notification = Notification::create([
+                'user_id' => $user->id,
+                'title' => $validated['title'],
+                'message' => $validated['message'],
+                'type' => $validated['type'],
+                'is_read' => false,
+                'is_announcement' => true,
+            ]);
+            $notifications[] = $notification;
+
+            // Send email notification
+            try {
+                Mail::to($user->email)->send(new AnnouncementNotification($emailData, $user));
+                $sentEmails++;
+                
+                // Add small delay to avoid hitting rate limits
+                if ($sentEmails % 10 === 0) {
+                    sleep(1);
+                }
+                
+            } catch (\Exception $emailError) {
+                Log::error("Failed to send email to {$user->email}: " . $emailError->getMessage());
+                $failedEmails[] = $user->email;
+            }
+        }
+
+        $response = [
+            'message' => 'Announcement sent successfully',
+            'sent_to' => count($users) . ' users',
+            'notifications_created' => count($notifications),
+            'emails_sent' => $sentEmails,
+            'emails_failed' => count($failedEmails),
+            'notifications' => $notifications
+        ];
+
+        if (!empty($failedEmails)) {
+            $response['failed_emails'] = $failedEmails;
+            $response['warning'] = 'Some emails failed to send. Check logs for details.';
+        }
+
+        return response()->json($response, 201);
+
+    } catch (\Exception $e) {
+        Log::error('Error creating announcement: ' . $e->getMessage());
         return response()->json(['message' => 'Internal server error'], 500);
     }
 }
