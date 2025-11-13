@@ -77,6 +77,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/users/{id}/penalty/decrease', [UserController::class, 'decreasePenalty']);
     Route::get('/users/{id}/details', [UserController::class, 'getUserDetails']);
     Route::post('/notifications/announcement', [NotificationController::class, 'createAnnouncement']);
+    Route::get('/notifications/announcements/history', [NotificationController::class, 'getAnnouncementHistory']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

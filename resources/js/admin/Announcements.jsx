@@ -1,5 +1,5 @@
 import "./admin-css/announcements.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import Swal from 'sweetalert2';
@@ -9,16 +9,22 @@ const MaterialIcons = {
   Back: '←',
   Info: 'ℹ️',
   Warning: '⚠️',
-  Emergency: '🚨', // Added emergency icon
+  Emergency: '🚨',
   People: '👥',
   Location: '📍',
   Home: '🏠',
-  Users: '👥⚠️'
+  Users: '👥⚠️',
+  History: '📋',
+  Send: '📤',
+  Delete: '🗑️'
 };
 
 export default function Announcements({ currentUser, onLogout }) {
   const [loading, setLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [announcementHistory, setAnnouncementHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('compose');
   const [formData, setFormData] = useState({
     title: "",
     message: "",
@@ -36,24 +42,61 @@ export default function Announcements({ currentUser, onLogout }) {
     "Santo Niño", "Santo Tomas", "Santo Niño de Panglao", "Taytay", "Tigbao"
   ];
 
-  // Announcement types with Emergency instead of Success
   const announcementTypes = [
     { value: 'info', label: 'Information', icon: MaterialIcons.Info },
     { value: 'warning', label: 'Warning', icon: MaterialIcons.Warning },
     { value: 'emergency', label: 'Emergency Alert', icon: MaterialIcons.Emergency }
   ];
 
+  // Load announcement history
+  const loadAnnouncementHistory = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8000/api/notifications/announcements/history', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      setAnnouncementHistory(response.data || []);
+    } catch (error) {
+      console.error('Error loading announcement history:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to load announcement history',
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7'
+      });
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'history') {
+      loadAnnouncementHistory();
+    }
+  }, [activeTab]);
+
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
+ const handleInputChange = (e) => {
+  const { name, value } = e.target;
+  
+  // Debug logging to see what's happening
+  console.log('Input change:', name, value);
+  
+  setFormData(prev => {
+    const newFormData = {
       ...prev,
       [name]: value
-    }));
-  };
+    };
+    console.log('New form data:', newFormData);
+    return newFormData;
+  });
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -97,7 +140,6 @@ export default function Announcements({ currentUser, onLogout }) {
         }
       });
 
-      // Enhanced success message with email stats
       const successMessage = response.data.emails_sent !== undefined ? 
         `
           <div style="text-align: left;">
@@ -128,7 +170,7 @@ export default function Announcements({ currentUser, onLogout }) {
         background: '#E3F2FD'
       });
 
-      // Reset form
+      // Reset form and reload history
       setFormData({
         title: "",
         message: "",
@@ -136,6 +178,10 @@ export default function Announcements({ currentUser, onLogout }) {
         target_users: "all",
         barangay: ""
       });
+      
+      // Load updated history
+      loadAnnouncementHistory();
+      setActiveTab('history');
 
     } catch (error) {
       console.error('Error sending announcement:', error);
@@ -172,11 +218,30 @@ export default function Announcements({ currentUser, onLogout }) {
 
   const getTypeColor = (type) => {
     switch(type) {
-      case 'info': return '#2196F3';
-      case 'warning': return '#FF9800';
-      case 'emergency': return '#F44336'; // Red for emergency
-      default: return '#9C27B0';
+      case 'info': return '#4299e1';
+      case 'warning': return '#ed8936';
+      case 'emergency': return '#f56565';
+      default: return '#667eea';
     }
+  };
+
+  const getTypeBackground = (type) => {
+    switch(type) {
+      case 'info': return '#f0f9ff';
+      case 'warning': return '#fff5f0';
+      case 'emergency': return '#fff0f0';
+      default: return '#f8faff';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const handleLogout = async () => {
@@ -213,44 +278,314 @@ export default function Announcements({ currentUser, onLogout }) {
     }
   };
 
-  return (
-    <div className="body">
-      {/* Top Bar - Same as AdminDashboard */}
-      <div className="topbars">
+  const AnnouncementCompose = () => (
+    <div className="announcements-main-content">
+      <form onSubmit={handleSubmit} className="announcements-form-container">
+        <div className="announcements-form-section">
+          <h3>Announcement Details</h3>
+          
+          <div className="announcements-form-group">
+            <label>Title *</label>
+           <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              placeholder="Enter announcement title..."
+              maxLength="255"
+              disabled={loading}
+              onKeyPress={(e) => {
+                // Allow all characters including spaces
+                // This ensures spaces work properly
+              }}
+            />
+            <div className="announcements-char-count">{formData.title.length}/255</div>
+          </div>
+
+          <div className="announcements-form-group">
+            <label>Message *</label>
+           <textarea
+              name="message"
+              value={formData.message}
+              onChange={handleInputChange}
+              placeholder="Enter your announcement message..."
+              rows="6"
+              disabled={loading}
+              onKeyDown={(e) => {
+                // This helps capture all input including spaces
+                if (e.key === ' ') {
+                  e.preventDefault();
+                  const { selectionStart, selectionEnd } = e.target;
+                  const newValue = formData.message.substring(0, selectionStart) + ' ' + formData.message.substring(selectionEnd);
+                  setFormData(prev => ({
+                    ...prev,
+                    message: newValue
+                  }));
+                  // Set cursor position after space
+                  setTimeout(() => {
+                    e.target.selectionStart = selectionStart + 1;
+                    e.target.selectionEnd = selectionStart + 1;
+                  }, 0);
+                }
+              }}
+            />
+          </div>
+
+          <div className="announcements-form-group">
+            <label>Type *</label>
+            <div className="announcements-type-options">
+              {announcementTypes.map(type => (
+                <label 
+                  key={type.value}
+                  className={`announcements-type-option ${formData.type === type.value ? 'selected' : ''}`}
+                  data-type={type.value}
+                >
+                  <input
+                    type="radio"
+                    name="type"
+                    value={type.value}
+                    checked={formData.type === type.value}
+                    onChange={handleInputChange}
+                    disabled={loading}
+                  />
+                  <span className="announcements-type-icon">
+                    {type.icon}
+                  </span>
+                  <span className="announcements-type-label">{type.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="announcements-form-section">
+          <h3>Audience</h3>
+          
+          <div className="announcements-form-group">
+            <label>Target Users *</label>
+            <div className="announcements-target-options">
+              <label className={`announcements-target-option ${formData.target_users === 'all' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="target_users"
+                  value="all"
+                  checked={formData.target_users === 'all'}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                />
+                <span className="announcements-target-icon">{MaterialIcons.People}</span>
+                <div className="announcements-target-info">
+                  <div className="announcements-target-label">All Users</div>
+                  <div className="announcements-target-description">Send to all registered users via in-app and email</div>
+                </div>
+              </label>
+
+              <label className={`announcements-target-option ${formData.target_users === 'specific_barangay' ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="target_users"
+                  value="specific_barangay"
+                  checked={formData.target_users === 'specific_barangay'}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                />
+                <span className="announcements-target-icon">{MaterialIcons.Location}</span>
+                <div className="announcements-target-info">
+                  <div className="announcements-target-label">Specific Barangay</div>
+                  <div className="announcements-target-description">Send to users in a specific barangay via in-app and email</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {formData.target_users === 'specific_barangay' && (
+            <div className="announcements-form-group">
+              <label>Select Barangay *</label>
+              <select
+                name="barangay"
+                value={formData.barangay}
+                onChange={handleInputChange}
+                disabled={loading}
+              >
+                <option value="">Select a barangay</option>
+                {barangays.map(barangay => (
+                  <option key={barangay} value={barangay}>{barangay}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="announcements-form-actions">
+          <button className="announcements-submit-btn" type="submit" disabled={loading}>
+            {loading ? (
+              <>
+                <div className="announcements-button-spinner"></div>
+                Sending...
+              </>
+            ) : (
+              `${MaterialIcons.Send} Send Announcement`
+            )}
+          </button>
+        </div>
+      </form>
+
+      <div className="announcements-preview-section">
+        <h3>Preview</h3>
+        <div 
+          className="announcements-preview-card" 
+          data-type={formData.type}
+        >
+          <div className="announcements-preview-header">
+            <span className="announcements-preview-icon">
+              {getTypeIcon(formData.type)}
+            </span>
+            <div className="announcements-preview-title">
+              <strong>{formData.title || "Announcement Title"}</strong>
+              <span className="announcements-preview-type">
+                {formData.type.charAt(0).toUpperCase() + formData.type.slice(1)}
+              </span>
+            </div>
+          </div>
+          <div className="announcements-preview-message">
+            {formData.message || "Your announcement message will appear here..."}
+          </div>
+          <div className="announcements-preview-audience">
+            <strong>To:</strong> {
+              formData.target_users === 'all' 
+                ? 'All Users' 
+                : formData.barangay 
+                  ? `Users in ${formData.barangay}`
+                  : 'Specific Barangay (not selected)'
+            }
+          </div>
+          <div className="announcements-preview-delivery">
+            <strong>Delivery:</strong> In-app notification + Email
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const AnnouncementHistory = () => (
+    <div className="announcements-history-section">
+      <div className="announcements-history-header">
+        <h3>{MaterialIcons.History} Announcement History</h3>
         <button 
-          className="mobile-menu-btn"
+          className="announcements-refresh-btn"
+          onClick={loadAnnouncementHistory}
+          disabled={historyLoading}
+        >
+          {historyLoading ? 'Refreshing...' : '🔄 Refresh'}
+        </button>
+      </div>
+
+      {historyLoading ? (
+        <div className="announcements-history-loading">
+          <div className="announcements-spinner"></div>
+          <p>Loading announcement history...</p>
+        </div>
+      ) : announcementHistory.length === 0 ? (
+        <div className="announcements-history-empty">
+          <div className="announcements-empty-icon">{MaterialIcons.Announcement}</div>
+          <h4>No announcements sent yet</h4>
+          <p>Your sent announcements will appear here</p>
+        </div>
+      ) : (
+        <div className="announcements-history-list">
+          {announcementHistory.map(announcement => (
+            <div 
+              key={announcement.id}
+              className="announcements-history-card"
+              data-type={announcement.type}
+            >
+              <div className="announcements-history-header-info">
+                <div className="announcements-history-title-section">
+                  <span className="announcements-history-type-icon">
+                    {getTypeIcon(announcement.type)}
+                  </span>
+                  <div className="announcements-history-title-content">
+                    <h4>{announcement.title}</h4>
+                    <div className="announcements-history-meta">
+                      <span className="announcements-history-type">
+                        {announcement.type}
+                      </span>
+                      <span className="announcements-history-date">
+                        {formatDate(announcement.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="announcements-history-message">
+                {announcement.message}
+              </div>
+              
+              <div className="announcements-history-footer">
+                <div className="announcements-history-audience">
+                  <strong>Sent to:</strong> {
+                    announcement.target_users === 'all' 
+                      ? 'All Users' 
+                      : `Users in ${announcement.barangay}`
+                  }
+                </div>
+                <div className="announcements-history-stats">
+                  {announcement.emails_sent !== undefined && (
+                    <>
+                      <span>📧 {announcement.emails_sent} sent</span>
+                      {announcement.emails_failed > 0 && (
+                        <span className="announcements-failed-count">❌ {announcement.emails_failed} failed</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="announcements-body">
+      {/* Top Bar */}
+      <div className="announcements-topbar">
+        <button 
+          className="announcements-mobile-menu-btn"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           ☰
         </button>
-        <div className="logo-title-container">
-          <img 
+        <div className="announcements-logo-title-container">
+           <img 
             src="/images/logo.jpg" 
             alt="EventHub Logo" 
             className="topbar-logo"
           />
-          <h3 className="title">EventHub</h3>
+          <h3 className="announcements-title">EventHub</h3>
         </div>
         
-        <div className="topbar-right">
-          <button className="logout-btn" onClick={handleLogout}>
+        <div className="announcements-topbar-right">
+          <button className="announcements-logout-btn" onClick={handleLogout}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="#100e0fff" style={{marginRight: '8px'}}>
               <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
             </svg>
-            <span className="logout-text">Logout</span>
+            <span className="announcements-logout-text">Logout</span>
           </button>
         </div>
       </div>
 
-      {/* Sidebar - Same as AdminDashboard */}
-      <div className={`sidebars ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+      {/* Sidebar */}
+      <div className={`announcements-sidebar ${mobileMenuOpen ? 'announcements-mobile-open' : ''}`}>
         <ul>
           <li>
             <Link to="/admin-dashboard" onClick={handleNavClick}>
               {MaterialIcons.Home} Home
             </Link>
           </li>
-          <li className="currentpages">
+          <li className="announcements-current-page">
             <Link to="/announcements" onClick={handleNavClick}>
               {MaterialIcons.Announcement} Announcement
             </Link>
@@ -265,13 +600,13 @@ export default function Announcements({ currentUser, onLogout }) {
 
       {mobileMenuOpen && (
         <div 
-          className="mobile-overlay"
+          className="announcements-mobile-overlay"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* Main Content */}
-      <div className="admin-section">
+      <div className="announcements-admin-section">
         <div className="announcements-container">
           <div className="announcements-header-section">
             <div className="announcements-header-content">
@@ -280,174 +615,24 @@ export default function Announcements({ currentUser, onLogout }) {
             </div>
           </div>
 
-          <div className="announcements-main-content">
-            <form onSubmit={handleSubmit} className="announcements-form-container">
-              <div className="announcements-form-section">
-                <h3>Announcement Details</h3>
-                
-                <div className="announcements-form-group">
-                  <label>Title *</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={formData.title}
-                    onChange={handleInputChange}
-                    placeholder="Enter announcement title..."
-                    maxLength="255"
-                    disabled={loading}
-                  />
-                  <div className="announcements-char-count">{formData.title.length}/255</div>
-                </div>
-
-                <div className="announcements-form-group">
-                  <label>Message *</label>
-                  <textarea
-                    name="message"
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    placeholder="Enter your announcement message..."
-                    rows="6"
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="announcements-form-group">
-                  <label>Type *</label>
-                  <div className="announcements-type-options">
-                    {announcementTypes.map(type => (
-                      <label 
-                        key={type.value}
-                        className={`announcements-type-option ${formData.type === type.value ? 'selected' : ''}`}
-                        style={formData.type === type.value ? { borderColor: getTypeColor(type.value) } : {}}
-                        data-type={type.value}
-                      >
-                        <input
-                          type="radio"
-                          name="type"
-                          value={type.value}
-                          checked={formData.type === type.value}
-                          onChange={handleInputChange}
-                          disabled={loading}
-                        />
-                        <span className="announcements-type-icon" style={{ color: getTypeColor(type.value) }}>
-                          {type.icon}
-                        </span>
-                        <span className="announcements-type-label">{type.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="announcements-form-section">
-                <h3>Audience</h3>
-                
-                <div className="announcements-form-group">
-                  <label>Target Users *</label>
-                  <div className="announcements-target-options">
-                    <label className={`announcements-target-option ${formData.target_users === 'all' ? 'selected' : ''}`}>
-                      <input
-                        type="radio"
-                        name="target_users"
-                        value="all"
-                        checked={formData.target_users === 'all'}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                      />
-                      <span className="announcements-target-icon">{MaterialIcons.People}</span>
-                      <div className="announcements-target-info">
-                        <div className="announcements-target-label">All Users</div>
-                        <div className="announcements-target-description">Send to all registered users via in-app and email</div>
-                      </div>
-                    </label>
-
-                    <label className={`announcements-target-option ${formData.target_users === 'specific_barangay' ? 'selected' : ''}`}>
-                      <input
-                        type="radio"
-                        name="target_users"
-                        value="specific_barangay"
-                        checked={formData.target_users === 'specific_barangay'}
-                        onChange={handleInputChange}
-                        disabled={loading}
-                      />
-                      <span className="announcements-target-icon">{MaterialIcons.Location}</span>
-                      <div className="announcements-target-info">
-                        <div className="announcements-target-label">Specific Barangay</div>
-                        <div className="announcements-target-description">Send to users in a specific barangay via in-app and email</div>
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                {formData.target_users === 'specific_barangay' && (
-                  <div className="announcements-form-group">
-                    <label>Select Barangay *</label>
-                    <select
-                      name="barangay"
-                      value={formData.barangay}
-                      onChange={handleInputChange}
-                      disabled={loading}
-                    >
-                      <option value="">Select a barangay</option>
-                      {barangays.map(barangay => (
-                        <option key={barangay} value={barangay}>{barangay}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-             <div className="announcements-form-actions">
-                
-                 <button className="announcements-submit-btn" type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <div className="announcements-button-spinner"></div>
-                     Sending...
-                  </>
-                ) : (
-                  '📤 Send Announcement'
-                )}
-              </button>
-            </div>
-            </form>
-
-            <div className="announcements-preview-section">
-              <h3>Preview</h3>
-              <div 
-                className="announcements-preview-card" 
-                style={{ borderLeftColor: getTypeColor(formData.type) }}
-                data-type={formData.type}
-              >
-                <div className="announcements-preview-header">
-                  <span className="announcements-preview-icon" style={{ color: getTypeColor(formData.type) }}>
-                    {getTypeIcon(formData.type)}
-                  </span>
-                  <div className="announcements-preview-title">
-                    <strong>{formData.title || "Announcement Title"}</strong>
-                    <span className="announcements-preview-type" style={{ color: getTypeColor(formData.type) }}>
-                      {formData.type.charAt(0).toUpperCase() + formData.type.slice(1)}
-                    </span>
-                  </div>
-                </div>
-                <div className="announcements-preview-message">
-                  {formData.message || "Your announcement message will appear here..."}
-                </div>
-                <div className="announcements-preview-audience">
-                  <strong>To:</strong> {
-                    formData.target_users === 'all' 
-                      ? 'All Users' 
-                      : formData.barangay 
-                        ? `Users in ${formData.barangay}`
-                        : 'Specific Barangay (not selected)'
-                  }
-                </div>
-                <div className="announcements-preview-delivery">
-                  <strong>Delivery:</strong> In-app notification + Email
-                </div>
-              </div>
-            </div>
+          {/* Tabs */}
+          <div className="announcements-tabs">
+            <button 
+              className={`announcements-tab ${activeTab === 'compose' ? 'announcements-tab-active' : ''}`}
+              onClick={() => setActiveTab('compose')}
+            >
+              {MaterialIcons.Send} Compose
+            </button>
+            <button 
+              className={`announcements-tab ${activeTab === 'history' ? 'announcements-tab-active' : ''}`}
+              onClick={() => setActiveTab('history')}
+            >
+              {MaterialIcons.History} History
+            </button>
           </div>
+
+          {/* Tab Content */}
+          {activeTab === 'compose' ? <AnnouncementCompose /> : <AnnouncementHistory />}
         </div>
       </div>
     </div>

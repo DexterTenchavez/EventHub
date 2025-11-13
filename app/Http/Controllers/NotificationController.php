@@ -9,6 +9,7 @@ use App\Mail\AnnouncementNotification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 
 class NotificationController extends Controller
 {
@@ -322,6 +323,51 @@ public function createAnnouncement(Request $request)
 
     } catch (\Exception $e) {
         Log::error('Error creating announcement: ' . $e->getMessage());
+        return response()->json(['message' => 'Internal server error'], 500);
+    }
+}
+
+
+public function getAnnouncementHistory(Request $request)
+{
+    try {
+        $admin = Auth::user();
+        
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        // Get unique announcements by grouping
+        $announcements = Notification::where('is_announcement', true)
+            ->select(
+                'title', 
+                'message', 
+                'type',
+                DB::raw('MAX(created_at) as latest_date'),
+                DB::raw('COUNT(DISTINCT user_id) as user_count'),
+                DB::raw('MIN(id) as first_notification_id')
+            )
+            ->groupBy('title', 'message', 'type')
+            ->orderBy('latest_date', 'desc')
+            ->get()
+            ->map(function($notification) {
+                return [
+                    'id' => $notification->first_notification_id,
+                    'title' => $notification->title,
+                    'message' => $notification->message,
+                    'type' => $notification->type,
+                    'created_at' => $notification->latest_date,
+                    'sent_to' => $notification->user_count . ' users',
+                    'target_users' => 'all',
+                    'emails_sent' => $notification->user_count,
+                    'emails_failed' => 0
+                ];
+            });
+
+        return response()->json($announcements);
+
+    } catch (\Exception $e) {
+        Log::error('Error fetching announcement history: ' . $e->getMessage());
         return response()->json(['message' => 'Internal server error'], 500);
     }
 }

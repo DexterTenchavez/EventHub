@@ -10,6 +10,7 @@ const MaterialIcons = {
   CheckCircle: '✅',
   Warning: '⚠️',
   Info: 'ℹ️',
+  Emergency: '🚨',
   Delete: '🗑️',
   Event: '📅',
   Schedule: '⏰',
@@ -292,9 +293,15 @@ export default function Notifications({ currentUser }) {
     }
   };
 
+  // FIXED: Archive function - only marks as read, doesn't move to archive filter
   const archiveNotification = async (notificationId) => {
-    await markAsRead(notificationId, true);
-    toast.success('Notification archived');
+    try {
+      await markAsRead(notificationId, true);
+      toast.success('Notification archived');
+    } catch (error) {
+      console.error('Error archiving notification:', error);
+      toast.error('Failed to archive notification');
+    }
   };
 
   useEffect(() => {
@@ -314,6 +321,7 @@ export default function Notifications({ currentUser }) {
     }
   }, [currentUser]);
 
+  // FIXED: Filter logic - "archived" should only show read notifications
   const filteredNotifications = notifications.filter(notification => {
     switch (activeFilter) {
       case 'unread':
@@ -329,12 +337,18 @@ export default function Notifications({ currentUser }) {
     }
   });
 
+  // FIXED: Count logic for archived
+  const unreadCount = notifications.filter(notif => !notif.is_read).length;
+  const archivedCount = notifications.filter(notif => notif.is_read).length;
+  const eventCount = notifications.filter(notif => notif.event_id).length;
+  const systemCount = notifications.filter(notif => !notif.event_id).length;
+
   const filters = [
     { key: 'all', label: 'All', count: notifications.length },
-    { key: 'unread', label: 'Unread', count: notifications.filter(n => !n.is_read).length },
-    { key: 'events', label: 'Events', count: notifications.filter(n => n.event_id).length },
-    { key: 'system', label: 'System', count: notifications.filter(n => !n.event_id).length },
-    { key: 'archived', label: 'Archived', count: notifications.filter(n => n.is_read).length }
+    { key: 'unread', label: 'Unread', count: unreadCount },
+    { key: 'events', label: 'Events', count: eventCount },
+    { key: 'system', label: 'System', count: systemCount },
+    { key: 'archived', label: 'Archived', count: archivedCount }
   ];
 
   const handleBack = () => {
@@ -355,21 +369,47 @@ export default function Notifications({ currentUser }) {
     }
   };
 
+  // UPDATED: Enhanced notification type handling
   const getNotificationIcon = (type) => {
     switch(type) {
       case 'success': return MaterialIcons.CheckCircle;
       case 'warning': return MaterialIcons.Warning;
+      case 'emergency': return MaterialIcons.Emergency;
       case 'info': return MaterialIcons.Info;
       default: return MaterialIcons.Notifications;
     }
   };
 
+  // UPDATED: Enhanced colors for different types
   const getNotificationColor = (type) => {
     switch(type) {
       case 'success': return '#4caf50';
       case 'warning': return '#ff9800';
+      case 'emergency': return '#f44336';
       case 'info': return '#2196f3';
       default: return '#9c27b0';
+    }
+  };
+
+  // UPDATED: Get background color for notification types
+  const getNotificationBackground = (type) => {
+    switch(type) {
+      case 'success': return 'linear-gradient(135deg, #4caf50, #66bb6a)';
+      case 'warning': return 'linear-gradient(135deg, #ff9800, #ffb74d)';
+      case 'emergency': return 'linear-gradient(135deg, #f44336, #ef5350)';
+      case 'info': return 'linear-gradient(135deg, #2196f3, #42a5f5)';
+      default: return 'linear-gradient(135deg, #667eea, #764ba2)';
+    }
+  };
+
+  // UPDATED: Get type label
+  const getTypeLabel = (type) => {
+    switch(type) {
+      case 'success': return 'Success';
+      case 'warning': return 'Warning';
+      case 'emergency': return 'Emergency Alert';
+      case 'info': return 'Information';
+      default: return 'Notification';
     }
   };
 
@@ -423,18 +463,25 @@ export default function Notifications({ currentUser }) {
     }
   };
 
-  const unreadCount = notifications.filter(notif => !notif.is_read).length;
-
   const NotificationDetail = () => {
     if (!selectedNotification) return null;
 
     return (
       <div className="mui-detail-view">
-        <div className="mui-detail-header">
+        <div 
+          className="mui-detail-header"
+          style={{ background: getNotificationBackground(selectedNotification.type) }}
+        >
           <button className="mui-back-button" onClick={() => setViewMode('list')}>
             {MaterialIcons.ArrowBack}
           </button>
+          <div className="mui-detail-icon">
+            {getNotificationIcon(selectedNotification.type)}
+          </div>
           <div className="mui-detail-title">
+            <div className="mui-notification-type-badge">
+              {getTypeLabel(selectedNotification.type)}
+            </div>
             <h2 className="mui-text-wrap">{selectedNotification.title}</h2>
             <p className="mui-detail-time">
               {formatRelativeTime(selectedNotification.created_at)}
@@ -555,7 +602,7 @@ export default function Notifications({ currentUser }) {
           {filteredNotifications.map(notification => (
             <div 
               key={notification.id} 
-              className={`mui-list-item ${!notification.is_read ? 'mui-unread' : ''}`}
+              className={`mui-list-item ${!notification.is_read ? 'mui-unread' : ''} mui-notification-type-${notification.type}`}
               onClick={() => handleNotificationClick(notification)}
             >
               <div className="mui-list-item-icon" style={{ color: getNotificationColor(notification.type) }}>
@@ -563,9 +610,18 @@ export default function Notifications({ currentUser }) {
               </div>
               <div className="mui-list-item-content">
                 <div className="mui-list-item-header">
-                  <h4 className="mui-list-item-title mui-text-ellipsis" title={notification.title}>
-                    {truncateText(notification.title, 60)}
-                  </h4>
+                  <div className="mui-list-item-title-section">
+                    <h4 className="mui-list-item-title mui-text-ellipsis" title={notification.title}>
+                      {truncateText(notification.title, 60)}
+                    </h4>
+                    <span className="mui-notification-type-tag" style={{ 
+                      backgroundColor: getNotificationColor(notification.type) + '20',
+                      color: getNotificationColor(notification.type),
+                      border: `1px solid ${getNotificationColor(notification.type)}40`
+                    }}>
+                      {getTypeLabel(notification.type)}
+                    </span>
+                  </div>
                   <span className="mui-list-item-time">{formatRelativeTime(notification.created_at)}</span>
                 </div>
                 <p className="mui-list-item-message mui-text-ellipsis" title={notification.message}>
@@ -602,7 +658,11 @@ export default function Notifications({ currentUser }) {
                 </div>
               </div>
               {!notification.is_read && (
-                <div className="mui-unread-indicator" title="Unread"></div>
+                <div 
+                  className="mui-unread-indicator" 
+                  style={{ backgroundColor: getNotificationColor(notification.type) }}
+                  title="Unread"
+                ></div>
               )}
             </div>
           ))}
