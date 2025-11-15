@@ -371,4 +371,99 @@ public function getAnnouncementHistory(Request $request)
         return response()->json(['message' => 'Internal server error'], 500);
     }
 }
+
+public function deleteAllRead()
+{
+    try {
+        Log::info('=== DELETE ALL READ METHOD CALLED ===');
+        
+        $user = Auth::user();
+        Log::info('User authenticated: ' . ($user ? $user->id : 'NULL'));
+        
+        if (!$user) {
+            Log::warning('User not authenticated in deleteAllRead');
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        Log::info('Deleting read notifications for user: ' . $user->id);
+        
+        // Count before deletion
+        $readCountBefore = Notification::where('user_id', $user->id)
+            ->where('is_read', true)
+            ->count();
+            
+        Log::info('Read notifications before deletion: ' . $readCountBefore);
+        
+        $deletedCount = Notification::where('user_id', $user->id)
+            ->where('is_read', true)
+            ->delete();
+
+        Log::info('Deleted count: ' . $deletedCount);
+        
+        Log::info('=== DELETE ALL READ COMPLETED ===');
+
+        return response()->json([
+            'message' => 'Read notifications deleted successfully',
+            'deleted_count' => $deletedCount
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error deleting all read notifications: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+        return response()->json(['message' => 'Internal server error'], 500);
+    }
+}
+
+public function deleteAnnouncement($id)
+{
+    try {
+        $admin = Auth::user();
+        
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        // Delete all notifications for this announcement
+        $deletedCount = Notification::where('is_announcement', true)
+            ->where('id', $id)
+            ->delete();
+
+        if ($deletedCount === 0) {
+            return response()->json(['message' => 'Announcement not found'], 404);
+        }
+
+        return response()->json([
+            'message' => 'Announcement deleted successfully',
+            'deleted_count' => $deletedCount
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error deleting announcement: ' . $e->getMessage());
+        return response()->json(['message' => 'Internal server error'], 500);
+    }
+}
+
+
+public function deleteAllAnnouncements()
+{
+    try {
+        $admin = Auth::user();
+        
+        if (!$admin || $admin->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        // Delete all announcement notifications
+        $deletedCount = Notification::where('is_announcement', true)->delete();
+
+        return response()->json([
+            'message' => 'All announcements deleted successfully',
+            'deleted_count' => $deletedCount
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error deleting all announcements: ' . $e->getMessage());
+        return response()->json(['message' => 'Internal server error'], 500);
+    }
+}
 }

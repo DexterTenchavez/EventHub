@@ -49,9 +49,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications', [NotificationController::class, 'store']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::delete('/notifications/delete-all-read', [NotificationController::class, 'deleteAllRead']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount']);
     Route::post('/notifications/create-event', [NotificationController::class, 'createEventNotification']);
+
     
     // Event notification routes
     Route::post('/events/send-notifications', [EventController::class, 'sendEventNotifications']);
@@ -78,6 +80,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/users/{id}/details', [UserController::class, 'getUserDetails']);
     Route::post('/notifications/announcement', [NotificationController::class, 'createAnnouncement']);
     Route::get('/notifications/announcements/history', [NotificationController::class, 'getAnnouncementHistory']);
+  Route::delete('/notifications/announcements/delete-all', [NotificationController::class, 'deleteAllAnnouncements']); // MOVE THIS UP
+Route::delete('/notifications/announcements/{id}', [NotificationController::class, 'deleteAnnouncement']);
+  
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

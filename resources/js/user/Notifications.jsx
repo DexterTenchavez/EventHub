@@ -16,7 +16,8 @@ const MaterialIcons = {
   Schedule: '⏰',
   Refresh: '🔄',
   Archive: '📁',
-  Settings: '⚙️'
+  Settings: '⚙️',
+  DeleteAll: '🗑️'
 };
 
 export default function Notifications({ currentUser }) {
@@ -98,6 +99,62 @@ export default function Notifications({ currentUser }) {
       setRefreshing(false);
     }
   };
+
+ // ADDED: Delete all read notifications function - WITH BACKEND SUPPORT
+const deleteAllReadNotifications = async () => {
+  try {
+    console.log('🚀 DELETE ALL READ - Starting process...');
+    
+    const token = getToken();
+    if (!token) {
+      console.error('❌ No token found');
+      toast.error('No authentication token found');
+      return;
+    }
+    
+    console.log('✅ Token found, making DELETE request...');
+
+    const response = await fetch('http://localhost:8000/api/notifications/delete-all-read', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    });
+
+    console.log('📡 Response received - Status:', response.status);
+    console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log('🎉 SUCCESS - Response:', result);
+      
+      // Update the state to remove read notifications
+      setNotifications(prev => {
+        const newNotifications = prev.filter(notif => !notif.is_read);
+        console.log('🔄 State updated - Old count:', prev.length, 'New count:', newNotifications.length);
+        return newNotifications;
+      });
+      
+      toast.success(`Deleted ${result.deleted_count} read notifications successfully`);
+    } else {
+      console.error('❌ DELETE failed - Status:', response.status);
+      const errorText = await response.text();
+      console.error('❌ Error response:', errorText);
+      
+      if (response.status === 401) {
+        toast.error('Session expired. Please log in again.');
+        localStorage.clear();
+        navigate('/');
+      } else {
+        toast.error(`Delete failed: ${response.status}`);
+      }
+    }
+  } catch (error) {
+    console.error('💥 Network error:', error);
+    toast.error('Network error. Please check your connection.');
+  }
+};
 
   const saveEventNotificationToDB = async (event, status, minutes = null) => {
     try {
@@ -342,6 +399,7 @@ export default function Notifications({ currentUser }) {
   const archivedCount = notifications.filter(notif => notif.is_read).length;
   const eventCount = notifications.filter(notif => notif.event_id).length;
   const systemCount = notifications.filter(notif => !notif.event_id).length;
+  const readCount = notifications.filter(notif => notif.is_read).length;
 
   const filters = [
     { key: 'all', label: 'All', count: notifications.length },
@@ -571,6 +629,14 @@ export default function Notifications({ currentUser }) {
             disabled={unreadCount === 0}
           >
             Mark all as read
+          </button>
+          {/* ADDED: Delete all read button - ONLY THIS WAS ADDED */}
+          <button 
+            className="mui-button mui-button-text mui-button-error"
+            onClick={deleteAllReadNotifications}
+            disabled={readCount === 0}
+          >
+            {MaterialIcons.DeleteAll} Delete all read
           </button>
         </div>
         <div className="mui-toolbar-right">

@@ -15,6 +15,8 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   const [feedbackComment, setFeedbackComment] = useState("");
   const [userFeedback, setUserFeedback] = useState({});
   const [expandedFeedback, setExpandedFeedback] = useState({});
+  const [lastActionTime, setLastActionTime] = useState(0);
+  const [actionCount, setActionCount] = useState(0);
 
   const categoryImages = {
     "Barangay Assembly": "/images/barangay_asssembly.jpg",
@@ -62,6 +64,32 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
            currentUser?.location || 
            currentUser?.address?.barangay || 
            'Unknown';
+  };
+
+  // Rate limiting function
+  const canPerformAction = () => {
+    const now = Date.now();
+    const timeDiff = now - lastActionTime;
+    
+    if (timeDiff > 60000) {
+      setActionCount(0);
+      setLastActionTime(now);
+      return true;
+    }
+    
+    if (actionCount >= 5) {
+      Swal.fire({
+        title: 'Action Limit Reached',
+        text: 'Please wait a minute before performing more actions.',
+        icon: 'warning',
+        confirmButtonColor: '#4FC3F7'
+      });
+      return false;
+    }
+    
+    setActionCount(prev => prev + 1);
+    setLastActionTime(now);
+    return true;
   };
 
   useEffect(() => {
@@ -185,6 +213,9 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   };
 
   const openFeedbackModal = (event) => {
+    if (!canPerformAction()) return;
+    
+    // Check if user already gave feedback
     if (userFeedback[event.id]) {
       Swal.fire({
         title: 'Feedback Already Submitted',
@@ -397,6 +428,29 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
     return 'Time not set';
   };
 
+  // Get user attendance status for an event
+  const getUserAttendanceStatus = (event) => {
+    if (!event.registrations || !Array.isArray(event.registrations)) {
+      return 'not_registered';
+    }
+    
+    const userRegistration = event.registrations.find(reg => reg.email === currentUser.email);
+    if (!userRegistration) {
+      return 'not_registered';
+    }
+    
+    return userRegistration.attendance || 'pending';
+  };
+
+  // Check if user can give feedback for an event
+  const canGiveFeedback = (event) => {
+    const eventStatus = getEventStatus(event);
+    const attendanceStatus = getUserAttendanceStatus(event);
+    
+    // Only allow feedback for past events where user was marked as present
+    return eventStatus === 'past' && attendanceStatus === 'present';
+  };
+
   const showCancellationReasonModal = (eventId, e) => {
     e?.stopPropagation();
     Swal.fire({
@@ -456,20 +510,20 @@ export default function Userdashboard({ events = [], setEvents, currentUser }) {
   };
 
   const getProfilePicture = () => {
-  if (!currentUser) return generateDefaultAvatar('User');
-  
-  const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
-  if (savedProfilePic) {
-    return savedProfilePic;
-  }
-  return generateDefaultAvatar(currentUser.name);
-};
+    if (!currentUser) return generateDefaultAvatar('User');
+    
+    const savedProfilePic = localStorage.getItem(`profilePicture_${currentUser.id}`);
+    if (savedProfilePic) {
+      return savedProfilePic;
+    }
+    return generateDefaultAvatar(currentUser.name);
+  };
 
-const generateDefaultAvatar = (name) => {
-  const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
-  const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
-  return `data:image/svg+xml;base64,${btoa(svg)}`;
-};
+  const generateDefaultAvatar = (name) => {
+    const initials = name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+    const svg = `<svg width="32" height="32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" fill="#4caf50"/><text x="16" y="18" font-family="Arial" font-size="14" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+  };
 
   const handleRegisterToggle = async (eventId, cancellationReason = null, reasonType = null, e) => {
     e?.stopPropagation();
@@ -553,6 +607,20 @@ const generateDefaultAvatar = (name) => {
     return comment.substring(0, 100) + '...';
   };
 
+  // Get attendance badge color
+  const getAttendanceBadge = (attendance) => {
+    switch (attendance) {
+      case 'present':
+        return <span className="attendance-badge present">Present</span>;
+      case 'absent':
+        return <span className="attendance-badge absent">Absent</span>;
+      case 'pending':
+        return <span className="attendance-badge pending">Pending</span>;
+      default:
+        return null;
+    }
+  };
+
   if (!currentUser) return <p>Loading...</p>;
 
   return (
@@ -580,13 +648,13 @@ const generateDefaultAvatar = (name) => {
               <span className="notification-badge">{notificationCount}</span>
             )}
           </Link>
-           <Link to="/profile" className="profile-link" onClick={handleNavClick}>
-    <img 
-      src={getProfilePicture()} 
-      alt="Profile" 
-      className="profile-picture-icon"
-    />
-  </Link>
+          <Link to="/profile" className="profile-link" onClick={handleNavClick}>
+            <img 
+              src={getProfilePicture()} 
+              alt="Profile" 
+              className="profile-picture-icon"
+            />
+          </Link>
         </div>
       </div>
 
@@ -662,6 +730,8 @@ const generateDefaultAvatar = (name) => {
                     const isTitleExpanded = expandedTitles[event.id];
                     const needsSeeMore = event.title.length > 50;
                     const hasGivenFeedback = userFeedback[event.id];
+                    const attendanceStatus = getUserAttendanceStatus(event);
+                    const canSubmitFeedback = canGiveFeedback(event);
 
                     return (
                       <div 
@@ -699,6 +769,14 @@ const generateDefaultAvatar = (name) => {
                           })} at {getTimeRange(event)}</p>
                           <p><strong>Location:</strong> {event.location}</p>
                           
+                          {/* Show attendance status if registered */}
+                          {isRegistered && (
+                            <div className="attendance-status">
+                              <strong>Your Status:</strong> 
+                              {getAttendanceBadge(attendanceStatus)}
+                            </div>
+                          )}
+                          
                           <div className="event-description-container">
                             <div className="event-description-label">Description:</div>
                             <div className="event-description-scroll">
@@ -707,7 +785,7 @@ const generateDefaultAvatar = (name) => {
                           </div>
                           
                           <div className="event-card-footer">
-                            <p><strong>Status:</strong> 
+                            <p><strong>Event Status:</strong> 
                               <span className={`status-badge ${status}`}>
                                 {status === "upcoming" ? "Upcoming" : 
                                  status === "present" ? "Started" : 
@@ -734,7 +812,7 @@ const generateDefaultAvatar = (name) => {
                                   <span className="feedback-check">✅</span>
                                   <span>Feedback Submitted</span>
                                 </div>
-                              ) : (
+                              ) : canSubmitFeedback ? (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -744,6 +822,14 @@ const generateDefaultAvatar = (name) => {
                                 >
                                   📝 Give Feedback
                                 </button>
+                              ) : (
+                                <p className="feedback-not-allowed-message">
+                                  {attendanceStatus === 'absent' 
+                                    ? "Cannot give feedback - Marked as absent" 
+                                    : attendanceStatus === 'pending'
+                                    ? "Cannot give feedback - Attendance pending"
+                                    : "Cannot give feedback"}
+                                </p>
                               )
                             )}
 
@@ -803,6 +889,15 @@ const generateDefaultAvatar = (name) => {
                   <strong>Location:</strong>
                   <span>{selectedEvent.location}</span>
                 </div>
+
+                {/* Show attendance status in modal if registered */}
+                {selectedEvent.registrations && Array.isArray(selectedEvent.registrations) && 
+                 selectedEvent.registrations.some(r => r.email === currentUser.email) && (
+                  <div className="detail-row">
+                    <strong>Your Status:</strong>
+                    {getAttendanceBadge(getUserAttendanceStatus(selectedEvent))}
+                  </div>
+                )}
                 
                 <div className="detail-row full-width">
                   <strong>Description:</strong>
@@ -813,7 +908,7 @@ const generateDefaultAvatar = (name) => {
 
                 <div className="modal-footer">
                   <div className="status-info">
-                    <strong>Status:</strong>
+                    <strong>Event Status:</strong>
                     <span className={`status-badge ${getEventStatus(selectedEvent)}`}>
                       {getEventStatus(selectedEvent) === "upcoming" ? "Upcoming" : 
                        getEventStatus(selectedEvent) === "present" ? "Started" : 
@@ -865,7 +960,7 @@ const generateDefaultAvatar = (name) => {
                           </div>
                         )}
                       </div>
-                    ) : (
+                    ) : canGiveFeedback(selectedEvent) ? (
                       <button
                         onClick={() => {
                           closeEventDetails();
@@ -875,6 +970,14 @@ const generateDefaultAvatar = (name) => {
                       >
                         📝 Give Feedback
                       </button>
+                    ) : (
+                      <p className="feedback-not-allowed-message-modal">
+                        {getUserAttendanceStatus(selectedEvent) === 'absent' 
+                          ? "Cannot give feedback - You were marked as absent" 
+                          : getUserAttendanceStatus(selectedEvent) === 'pending'
+                          ? "Cannot give feedback - Your attendance is still pending"
+                          : "Cannot give feedback for this event"}
+                      </p>
                     )
                   )}
                 </div>

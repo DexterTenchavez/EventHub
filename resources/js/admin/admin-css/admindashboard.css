@@ -1830,3 +1830,630 @@ body::before {
   color: #6b7280;
   font-weight: 600;
 }
+
+/* Admin Dashboard Attendance Modal - Unique Styling */
+.admindashboard-attendance-modal {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  max-width: 95% !important;
+  width: 95% !important;
+  max-height: 90vh !important;
+  overflow: hidden;
+  border: 3px solid #ffffff;
+  position: relative;
+  backdrop-filter: blur(10px);
+}
+
+.admindashboard-attendance-modal::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+  background-size: 200% 100%;
+  animation: admindashboard-shimmer 3s ease-in-out infinite;
+}
+
+@keyframes admindashboard-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.admindashboard-attendance-modal-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  padding: 25px 30px;
+  border-radius: 20px 20px 0 0;
+  border-bottom: 2px solid rgba(224, 231, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+.admindashboard-attendance-modal-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #667eea, transparent);
+}
+
+.admindashboard-attendance-modal-title-section h2 {
+  color: #1e293b;
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.admindashboard-attendance-modal-subtitle {
+  color: #475569;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+
+.admindashboard-attendance-modal-event-info {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.admindashboard-attendance-modal-event-info span {
+  background: rgba(102, 126, 234, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 500;
+}
+
+.admindashboard-attendance-modal-close {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+  z-index: 10;
+}
+
+.admindashboard-attendance-modal-close:hover {
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+}
+
+.admindashboard-attendance-modal-content {
+  padding: 0;
+  background: rgba(255, 255, 255, 0.95);
+  max-height: calc(90vh - 140px);
+  overflow-y: auto;
+}
+
+/* Statistics Grid */
+.admindashboard-attendance-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 30px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+}
+
+.admindashboard-stat-card {
+  background: white;
+  padding: 25px 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  position: relative;
+  overflow: hidden;
+}
+
+.admindashboard-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.admindashboard-stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.admindashboard-stat-card:hover::before {
+  opacity: 1;
+}
+
+.admindashboard-stat-card.active {
+  border-color: #667eea;
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.2);
+}
+
+.admindashboard-stat-card.active::before {
+  opacity: 1;
+}
+
+.admindashboard-stat-icon {
+  font-size: 2.5rem;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+}
+
+.admindashboard-stat-card.total .admindashboard-stat-icon { background: rgba(102, 126, 234, 0.15); }
+.admindashboard-stat-card.present .admindashboard-stat-icon { background: rgba(72, 187, 120, 0.15); }
+.admindashboard-stat-card.absent .admindashboard-stat-icon { background: rgba(245, 101, 101, 0.15); }
+.admindashboard-stat-card.pending .admindashboard-stat-icon { background: rgba(237, 137, 54, 0.15); }
+
+.admindashboard-stat-content {
+  flex: 1;
+}
+
+.admindashboard-stat-number {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.admindashboard-stat-card.total .admindashboard-stat-number { color: #667eea; }
+.admindashboard-stat-card.present .admindashboard-stat-number { color: #48bb78; }
+.admindashboard-stat-card.absent .admindashboard-stat-number { color: #f56565; }
+.admindashboard-stat-card.pending .admindashboard-stat-number { color: #ed8936; }
+
+.admindashboard-stat-label {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Bulk Actions */
+.admindashboard-bulk-actions {
+  background: white;
+  margin: 0 30px 20px;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.admindashboard-bulk-actions-header {
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+}
+
+.admindashboard-bulk-actions-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admindashboard-bulk-action-btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.admindashboard-bulk-action-btn.present {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: white;
+}
+
+.admindashboard-bulk-action-btn.absent {
+  background: linear-gradient(135deg, #f56565, #e53e3e);
+  color: white;
+}
+
+.admindashboard-bulk-action-btn.reset {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+  color: white;
+}
+
+.admindashboard-bulk-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Table Section */
+.admindashboard-attendance-table-section {
+  padding: 0 30px 30px;
+}
+
+.admindashboard-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.admindashboard-table-header h3 {
+  color: #1e293b;
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.admindashboard-table-count {
+  color: #667eea;
+  font-weight: 800;
+}
+
+.admindashboard-export-btn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.admindashboard-export-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+
+.admindashboard-table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+}
+
+.admindashboard-attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+.admindashboard-attendance-table thead {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.admindashboard-attendance-table th {
+  color: white;
+  padding: 18px 16px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admindashboard-attendance-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: all 0.3s ease;
+}
+
+.admindashboard-attendance-table tbody tr:hover {
+  background: rgba(102, 126, 234, 0.03);
+  transform: scale(1.01);
+}
+
+.admindashboard-attendance-table td {
+  padding: 16px;
+  vertical-align: middle;
+}
+
+.admindashboard-attendee-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admindashboard-attendee-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.95rem;
+}
+
+.admindashboard-contact-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.admindashboard-attendee-email {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.admindashboard-location-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.admindashboard-attendee-barangay {
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.admindashboard-attendee-purok {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+.admindashboard-attendance-status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  min-width: 100px;
+  text-align: center;
+}
+
+.admindashboard-attendance-status.present {
+  background: rgba(72, 187, 120, 0.15);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.admindashboard-attendance-status.absent {
+  background: rgba(245, 101, 101, 0.15);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.admindashboard-attendance-status.pending {
+  background: rgba(237, 137, 54, 0.15);
+  color: #ed8936;
+  border: 1px solid rgba(237, 137, 54, 0.3);
+}
+
+.admindashboard-attendance-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admindashboard-action-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.admindashboard-action-btn.present {
+  background: rgba(72, 187, 120, 0.1);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.admindashboard-action-btn.present:hover:not(:disabled) {
+  background: #48bb78;
+  color: white;
+  transform: scale(1.1);
+}
+
+.admindashboard-action-btn.present.active {
+  background: #48bb78;
+  color: white;
+}
+
+.admindashboard-action-btn.absent {
+  background: rgba(245, 101, 101, 0.1);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.admindashboard-action-btn.absent:hover:not(:disabled) {
+  background: #f56565;
+  color: white;
+  transform: scale(1.1);
+}
+
+.admindashboard-action-btn.absent.active {
+  background: #f56565;
+  color: white;
+}
+
+.admindashboard-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Empty State */
+.admindashboard-no-registrations {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.admindashboard-empty-state {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.admindashboard-empty-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.7;
+}
+
+.admindashboard-empty-state h4 {
+  color: #475569;
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.admindashboard-empty-state p {
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admindashboard-attendance-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    padding: 20px;
+  }
+
+  .admindashboard-attendance-modal-header {
+    padding: 20px;
+  }
+
+  .admindashboard-attendance-modal-title-section h2 {
+    font-size: 1.4rem;
+  }
+
+  .admindashboard-attendance-modal-event-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .admindashboard-table-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .admindashboard-attendance-table-section {
+    padding: 0 20px 20px;
+  }
+
+  .admindashboard-bulk-actions {
+    margin: 0 20px 15px;
+  }
+
+  .admindashboard-bulk-actions-buttons {
+    flex-direction: column;
+  }
+
+  .admindashboard-bulk-action-btn {
+    justify-content: center;
+  }
+
+  /* Mobile table styles */
+  .admindashboard-attendance-table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .admindashboard-attendance-table thead {
+    display: none;
+  }
+
+  .admindashboard-attendance-table tbody tr {
+    display: block;
+    margin-bottom: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 15px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .admindashboard-attendance-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .admindashboard-attendance-table td:last-child {
+    border-bottom: none;
+    justify-content: center;
+  }
+
+  .admindashboard-attendance-table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.85rem;
+    min-width: 80px;
+  }
+
+  .admindashboard-attendance-actions {
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admindashboard-attendance-modal {
+    width: 98% !important;
+    max-height: 95vh !important;
+  }
+
+  .admindashboard-stat-card {
+    padding: 20px 15px;
+  }
+
+  .admindashboard-stat-icon {
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+  }
+
+  .admindashboard-stat-number {
+    font-size: 1.8rem;
+  }
+}

@@ -1312,137 +1312,213 @@ export default function Admindashboard({ events, setEvents, onLogout, currentUse
         </div>
       )}
 
-      {/* Attendance Modal */}
+      {/* Attendance Modal - Redesigned with Unique Class Name */}
       {selectedEvent && !showFeedbackModal && (
         <div className="admin-modal-overlay" onClick={() => {
           setSelectedEvent(null);
           setSelectedStat('all');
         }}>
-          <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()}>
-            <div className="attendance-modal-header">
-              <h2>Registrations for {selectedEvent.title}</h2>
-              <button className="admin-modal-close" onClick={() => {
+          <div className="admin-modal admindashboard-attendance-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="admindashboard-attendance-modal-header">
+              <div className="admindashboard-attendance-modal-title-section">
+                <h2>📊 Event Attendance</h2>
+                <div className="admindashboard-attendance-modal-subtitle">
+                  {selectedEvent.title}
+                </div>
+                <div className="admindashboard-attendance-modal-event-info">
+                  <span className="event-date">
+                    📅 {new Date(selectedEvent.date).toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                  <span className="event-category">
+                    🏷️ {selectedEvent.category}
+                  </span>
+                </div>
+              </div>
+              <button className="admindashboard-attendance-modal-close" onClick={() => {
                 setSelectedEvent(null);
                 setSelectedStat('all');
-              }}>×</button>
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
             </div>
-            <div className="admin-form">
-              <div className="attendance-summary">
-                <h3>Attendance Summary</h3>
-                <div className="attendance-stats">
-                  <div 
-                    className={`stat-card total ${selectedStat === 'all' ? 'active' : ''}`}
-                    onClick={() => handleStatClick('all')}
-                  >
-                    <div className="stat-number total">{attendanceStats.total}</div>
-                    <div className="stat-label">Total</div>
-                  </div>
-                  <div 
-                    className={`stat-card present ${selectedStat === 'present' ? 'active' : ''}`}
-                    onClick={() => handleStatClick('present')}
-                  >
-                    <div className="stat-number present">{attendanceStats.present}</div>
-                    <div className="stat-label">Present</div>
-                  </div>
-                  <div 
-                    className={`stat-card absent ${selectedStat === 'absent' ? 'active' : ''}`}
-                    onClick={() => handleStatClick('absent')}
-                  >
-                    <div className="stat-number absent">{attendanceStats.absent}</div>
-                    <div className="stat-label">Absent</div>
-                  </div>
-                  <div 
-                    className={`stat-card pending ${selectedStat === 'pending' ? 'active' : ''}`}
-                    onClick={() => handleStatClick('pending')}
-                  >
-                    <div className="stat-number pending">{attendanceStats.pending}</div>
-                    <div className="stat-label">Pending</div>
+
+            <div className="admindashboard-attendance-modal-content">
+              {/* Statistics Cards */}
+              <div className="admindashboard-attendance-stats-grid">
+                <div 
+                  className={`admindashboard-stat-card total ${selectedStat === 'all' ? 'active' : ''}`}
+                  onClick={() => handleStatClick('all')}
+                >
+                  <div className="admindashboard-stat-icon">👥</div>
+                  <div className="admindashboard-stat-content">
+                    <div className="admindashboard-stat-number">{attendanceStats.total}</div>
+                    <div className="admindashboard-stat-label">Total Registrations</div>
                   </div>
                 </div>
 
-                {/* Bulk Actions */}
-                {selectedStat !== 'all' && filteredRegistrations.length > 0 && (
-                  <div className="bulk-actions">
+                <div 
+                  className={`admindashboard-stat-card present ${selectedStat === 'present' ? 'active' : ''}`}
+                  onClick={() => handleStatClick('present')}
+                >
+                  <div className="admindashboard-stat-icon">✅</div>
+                  <div className="admindashboard-stat-content">
+                    <div className="admindashboard-stat-number">{attendanceStats.present}</div>
+                    <div className="admindashboard-stat-label">Present</div>
+                  </div>
+                </div>
+
+                <div 
+                  className={`admindashboard-stat-card absent ${selectedStat === 'absent' ? 'active' : ''}`}
+                  onClick={() => handleStatClick('absent')}
+                >
+                  <div className="admindashboard-stat-icon">❌</div>
+                  <div className="admindashboard-stat-content">
+                    <div className="admindashboard-stat-number">{attendanceStats.absent}</div>
+                    <div className="admindashboard-stat-label">Absent</div>
+                  </div>
+                </div>
+
+                <div 
+                  className={`admindashboard-stat-card pending ${selectedStat === 'pending' ? 'active' : ''}`}
+                  onClick={() => handleStatClick('pending')}
+                >
+                  <div className="admindashboard-stat-icon">⏳</div>
+                  <div className="admindashboard-stat-content">
+                    <div className="admindashboard-stat-number">{attendanceStats.pending}</div>
+                    <div className="admindashboard-stat-label">Pending</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bulk Actions */}
+              {selectedStat !== 'all' && filteredRegistrations.length > 0 && (
+                <div className="admindashboard-bulk-actions">
+                  <div className="admindashboard-bulk-actions-header">
+                    <span>Bulk Actions for {filteredRegistrations.length} {selectedStat} registrations:</span>
+                  </div>
+                  <div className="admindashboard-bulk-actions-buttons">
                     <button 
-                      className="bulk-action-btn present"
+                      className="admindashboard-bulk-action-btn present"
                       onClick={() => handleBulkAction('present')}
                     >
-                      Mark all as Present
+                      <span>✅ Mark All Present</span>
                     </button>
                     <button 
-                      className="bulk-action-btn absent"
+                      className="admindashboard-bulk-action-btn absent"
                       onClick={() => handleBulkAction('absent')}
                     >
-                      Mark all as Absent
+                      <span>❌ Mark All Absent</span>
                     </button>
                     {selectedStat === 'pending' && (
                       <button 
-                        className="bulk-action-btn reset"
+                        className="admindashboard-bulk-action-btn reset"
                         onClick={() => handleBulkAction('pending')}
                       >
-                        Reset to Pending
+                        <span>🔄 Reset All</span>
                       </button>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Registrations Table */}
+              <div className="admindashboard-attendance-table-section">
+                <div className="admindashboard-table-header">
+                  <h3>
+                    {selectedStat === 'all' ? 'All Registrations' : 
+                     selectedStat === 'present' ? 'Present Attendees' :
+                     selectedStat === 'absent' ? 'Absent Attendees' : 'Pending Attendance'}
+                    <span className="admindashboard-table-count"> ({filteredRegistrations.length})</span>
+                  </h3>
+                 
+                </div>
+
+                {filteredRegistrations && filteredRegistrations.length > 0 ? (
+                  <div className="admindashboard-table-container">
+                    <table className="admindashboard-attendance-table">
+                      <thead>
+                        <tr>
+                          <th>Attendee</th>
+                          <th>Contact</th>
+                          <th>Location</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRegistrations.map((reg) => (
+                          <tr key={reg.id} className="admindashboard-attendance-row">
+                            <td>
+                              <div className="admindashboard-attendee-info">
+                                <div className="admindashboard-attendee-name">{reg.name}</div>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="admindashboard-contact-info">
+                                <div className="admindashboard-attendee-email">{reg.email}</div>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="admindashboard-location-info">
+                                <div className="admindashboard-attendee-barangay">
+                                  {getUserDetails(reg.email).barangay}
+                                </div>
+                                <div className="admindashboard-attendee-purok">
+                                  Purok {getUserDetails(reg.email).purok}
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className={`admindashboard-attendance-status ${reg.attendance || 'pending'}`}>
+                                {reg.attendance === 'present' && '✅ Present'}
+                                {reg.attendance === 'absent' && '❌ Absent'}
+                                {!reg.attendance || reg.attendance === 'pending' ? '⏳ Pending' : ''}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="admindashboard-attendance-actions">
+                                <button 
+                                  className={`admindashboard-action-btn present ${reg.attendance === 'present' ? 'active' : ''}`}
+                                  onClick={() => toggleAttendance(selectedEvent.id, reg.id, "present")}
+                                  disabled={reg.attendance === 'present'}
+                                >
+                                  ✅
+                                </button>
+                                <button 
+                                  className={`admindashboard-action-btn absent ${reg.attendance === 'absent' ? 'active' : ''}`}
+                                  onClick={() => toggleAttendance(selectedEvent.id, reg.id, "absent")}
+                                  disabled={reg.attendance === 'absent'}
+                                >
+                                  ❌
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="admindashboard-no-registrations">
+                    <div className="admindashboard-empty-state">
+                      <div className="admindashboard-empty-icon">📝</div>
+                      <h4>No Registrations Found</h4>
+                      <p>
+                        {selectedStat !== 'all' 
+                          ? `No ${selectedStat} registrations found for this event.`
+                          : 'No one has registered for this event yet.'}
+                      </p>
+                    </div>
+                </div>
                 )}
               </div>
-
-              {filteredRegistrations && filteredRegistrations.length > 0 ? (
-                <div className="attendance-table-container">
-                  <div className="table-header-info">
-                    Showing {filteredRegistrations.length} of {attendanceStats.total} registrations
-                    {selectedStat !== 'all' && ` (${selectedStat})`}
-                  </div>
-                  <table className="admin-table responsive-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Barangay</th>
-                        <th>Purok</th>
-                        <th>Attendance</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredRegistrations.map((reg) => (
-                        <tr key={reg.id}>
-                          <td data-label="Name">{reg.name}</td>
-                          <td data-label="Email">{reg.email}</td>
-                          <td data-label="Barangay">{getUserDetails(reg.email).barangay}</td>
-                          <td data-label="Purok">{getUserDetails(reg.email).purok}</td>
-                          <td data-label="Attendance">
-                            <span className={
-                              reg.attendance === 'present' ? 'status-present' :
-                              reg.attendance === 'absent' ? 'status-absent' : 'status-pending'
-                            }>
-                              {reg.attendance || "Pending"}
-                            </span>
-                          </td>
-                          <td data-label="Actions" className="attendance-actions">
-                            <button 
-                              className="btn-present"
-                              onClick={() => toggleAttendance(selectedEvent.id, reg.id, "present")}
-                              disabled={reg.attendance === 'present'}
-                            >
-                              Present
-                            </button>
-                            <button 
-                              className="btn-absent"
-                              onClick={() => toggleAttendance(selectedEvent.id, reg.id, "absent")}
-                              disabled={reg.attendance === 'absent'}
-                            >
-                              Absent
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p>No registrations found{selectedStat !== 'all' ? ` with status "${selectedStat}"` : ''}.</p>
-              )}
             </div>
           </div>
         </div>

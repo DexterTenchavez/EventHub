@@ -1403,3 +1403,65 @@ body::before {
   font-weight: bold;
   margin-right: 8px;
 }
+
+/* Attendance Badges */
+.attendance-status {
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attendance-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  min-width: 70px;
+  text-align: center;
+}
+
+.attendance-badge.present {
+  background: rgba(72, 187, 120, 0.15);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.3);
+}
+
+.attendance-badge.absent {
+  background: rgba(245, 101, 101, 0.15);
+  color: #f56565;
+  border: 1px solid rgba(245, 101, 101, 0.3);
+}
+
+.attendance-badge.pending {
+  background: rgba(237, 137, 54, 0.15);
+  color: #ed8936;
+  border: 1px solid rgba(237, 137, 54, 0.3);
+}
+
+/* Feedback not allowed messages */
+.feedback-not-allowed-message {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 6px;
+  margin: 10px 0;
+}
+
+.feedback-not-allowed-message-modal {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-style: italic;
+  text-align: center;
+  padding: 12px;
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 6px;
+  margin: 15px 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}

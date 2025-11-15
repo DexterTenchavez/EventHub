@@ -1,5 +1,5 @@
 import "./admin-css/announcements.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import Swal from 'sweetalert2';
@@ -48,9 +48,9 @@ export default function Announcements({ currentUser, onLogout }) {
     { value: 'emergency', label: 'Emergency Alert', icon: MaterialIcons.Emergency }
   ];
 
-  // Load announcement history
   const loadAnnouncementHistory = async () => {
     try {
+      setHistoryLoading(true);
       const token = localStorage.getItem('token');
       const response = await axios.get('http://localhost:8000/api/notifications/announcements/history', {
         headers: {
@@ -72,6 +72,116 @@ export default function Announcements({ currentUser, onLogout }) {
     }
   };
 
+  const deleteAnnouncement = async (announcementId, announcementTitle) => {
+    try {
+      const result = await Swal.fire({
+        title: 'Delete Announcement?',
+        html: `Are you sure you want to permanently delete "<strong>${announcementTitle}</strong>"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, delete permanently!',
+        cancelButtonText: 'Cancel'
+      });
+
+      if (result.isConfirmed) {
+        const token = localStorage.getItem('token');
+        
+        try {
+          await axios.delete(`http://localhost:8000/api/notifications/announcements/${announcementId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          setAnnouncementHistory(prev => 
+            prev.filter(announcement => announcement.id !== announcementId)
+          );
+
+          Swal.fire({
+            title: 'Deleted!',
+            text: 'Announcement has been permanently deleted.',
+            icon: 'success',
+            confirmButtonColor: '#4FC3F7'
+          });
+        } catch (backendError) {
+          console.error('Backend delete error:', backendError);
+          Swal.fire({
+            title: 'Error',
+            text: 'Failed to delete announcement from server',
+            icon: 'error',
+            confirmButtonColor: '#4FC3F7'
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Failed to delete announcement',
+        icon: 'error',
+        confirmButtonColor: '#4FC3F7'
+      });
+    }
+  };
+
+  const deleteAllAnnouncements = async () => {
+  if (announcementHistory.length === 0) {
+    Swal.fire({
+      title: 'No Announcements',
+      text: 'There are no announcements to delete.',
+      icon: 'info',
+      confirmButtonColor: '#4FC3F7'
+    });
+    return;
+  }
+
+  try {
+    const result = await Swal.fire({
+      title: 'Delete All Announcements?',
+      html: `Are you sure you want to delete <strong>all ${announcementHistory.length} announcements</strong> from history?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete all!',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      const token = localStorage.getItem('token');
+      
+      // Call the backend API to delete all announcements
+      await axios.delete('http://localhost:8000/api/notifications/announcements/delete-all', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      // Clear from frontend
+      setAnnouncementHistory([]);
+      
+      Swal.fire({
+        title: 'Deleted!',
+        text: 'All announcements have been permanently deleted.',
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7'
+      });
+    }
+  } catch (error) {
+    console.error('Error deleting all announcements:', error);
+    Swal.fire({
+      title: 'Error',
+      text: 'Failed to delete announcements',
+      icon: 'error',
+      confirmButtonColor: '#4FC3F7'
+    });
+  }
+};
+
   useEffect(() => {
     if (activeTab === 'history') {
       loadAnnouncementHistory();
@@ -81,22 +191,6 @@ export default function Announcements({ currentUser, onLogout }) {
   const handleNavClick = () => {
     setMobileMenuOpen(false);
   };
-
- const handleInputChange = (e) => {
-  const { name, value } = e.target;
-  
-  // Debug logging to see what's happening
-  console.log('Input change:', name, value);
-  
-  setFormData(prev => {
-    const newFormData = {
-      ...prev,
-      [name]: value
-    };
-    console.log('New form data:', newFormData);
-    return newFormData;
-  });
-};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,37 +234,24 @@ export default function Announcements({ currentUser, onLogout }) {
         }
       });
 
-      const successMessage = response.data.emails_sent !== undefined ? 
-        `
-          <div style="text-align: left;">
-            <p>Your announcement has been sent successfully!</p>
-            <p><strong>Notifications Created:</strong> ${response.data.sent_to}</p>
-            <p><strong>Emails Sent:</strong> ${response.data.emails_sent}</p>
-            ${response.data.emails_failed > 0 ? 
-              `<p style="color: orange;"><strong>Emails Failed:</strong> ${response.data.emails_failed}</p>` : 
-              ''}
-            <p><strong>Title:</strong> ${formData.title}</p>
-            <p><strong>Type:</strong> ${formData.type}</p>
-          </div>
-        ` :
-        `
-          <div style="text-align: left;">
-            <p>Your announcement has been sent successfully!</p>
-            <p><strong>Sent to:</strong> ${response.data.sent_to}</p>
-            <p><strong>Title:</strong> ${formData.title}</p>
-            <p><strong>Type:</strong> ${formData.type}</p>
-          </div>
-        `;
+      const successMessage = `
+        <div style="text-align: left;">
+          <p>Your announcement has been sent successfully!</p>
+          <p><strong>Sent to:</strong> ${response.data.sent_to}</p>
+          ${response.data.emails_sent !== undefined ? 
+            `<p><strong>Emails Sent:</strong> ${response.data.emails_sent}</p>` : ''}
+          ${response.data.emails_failed > 0 ? 
+            `<p style="color: orange;"><strong>Emails Failed:</strong> ${response.data.emails_failed}</p>` : ''}
+        </div>
+      `;
 
       Swal.fire({
         title: '✅ Announcement Sent!',
         html: successMessage,
-        icon: response.data.emails_failed > 0 ? 'warning' : 'success',
-        confirmButtonColor: '#4FC3F7',
-        background: '#E3F2FD'
+        icon: 'success',
+        confirmButtonColor: '#4FC3F7'
       });
 
-      // Reset form and reload history
       setFormData({
         title: "",
         message: "",
@@ -179,7 +260,6 @@ export default function Announcements({ currentUser, onLogout }) {
         barangay: ""
       });
       
-      // Load updated history
       loadAnnouncementHistory();
       setActiveTab('history');
 
@@ -199,8 +279,7 @@ export default function Announcements({ currentUser, onLogout }) {
         title: 'Error',
         text: errorMessage,
         icon: 'error',
-        confirmButtonColor: '#4FC3F7',
-        background: '#FFEBEE'
+        confirmButtonColor: '#4FC3F7'
       });
     } finally {
       setLoading(false);
@@ -213,24 +292,6 @@ export default function Announcements({ currentUser, onLogout }) {
       case 'warning': return MaterialIcons.Warning;
       case 'emergency': return MaterialIcons.Emergency;
       default: return MaterialIcons.Announcement;
-    }
-  };
-
-  const getTypeColor = (type) => {
-    switch(type) {
-      case 'info': return '#4299e1';
-      case 'warning': return '#ed8936';
-      case 'emergency': return '#f56565';
-      default: return '#667eea';
-    }
-  };
-
-  const getTypeBackground = (type) => {
-    switch(type) {
-      case 'info': return '#f0f9ff';
-      case 'warning': return '#fff5f0';
-      case 'emergency': return '#fff0f0';
-      default: return '#f8faff';
     }
   };
 
@@ -278,56 +339,36 @@ export default function Announcements({ currentUser, onLogout }) {
     }
   };
 
-  const AnnouncementCompose = () => (
+  // Memoized compose component
+  const composeContent = useMemo(() => (
     <div className="announcements-main-content">
       <form onSubmit={handleSubmit} className="announcements-form-container">
         <div className="announcements-form-section">
           <h3>Announcement Details</h3>
-          
+
           <div className="announcements-form-group">
             <label>Title *</label>
-           <input
+            <input
               type="text"
               name="title"
               value={formData.title}
-              onChange={handleInputChange}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
               placeholder="Enter announcement title..."
               maxLength="255"
               disabled={loading}
-              onKeyPress={(e) => {
-                // Allow all characters including spaces
-                // This ensures spaces work properly
-              }}
             />
             <div className="announcements-char-count">{formData.title.length}/255</div>
           </div>
 
           <div className="announcements-form-group">
             <label>Message *</label>
-           <textarea
+            <textarea
               name="message"
               value={formData.message}
-              onChange={handleInputChange}
+              onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
               placeholder="Enter your announcement message..."
               rows="6"
               disabled={loading}
-              onKeyDown={(e) => {
-                // This helps capture all input including spaces
-                if (e.key === ' ') {
-                  e.preventDefault();
-                  const { selectionStart, selectionEnd } = e.target;
-                  const newValue = formData.message.substring(0, selectionStart) + ' ' + formData.message.substring(selectionEnd);
-                  setFormData(prev => ({
-                    ...prev,
-                    message: newValue
-                  }));
-                  // Set cursor position after space
-                  setTimeout(() => {
-                    e.target.selectionStart = selectionStart + 1;
-                    e.target.selectionEnd = selectionStart + 1;
-                  }, 0);
-                }
-              }}
             />
           </div>
 
@@ -345,7 +386,7 @@ export default function Announcements({ currentUser, onLogout }) {
                     name="type"
                     value={type.value}
                     checked={formData.type === type.value}
-                    onChange={handleInputChange}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                     disabled={loading}
                   />
                   <span className="announcements-type-icon">
@@ -360,7 +401,7 @@ export default function Announcements({ currentUser, onLogout }) {
 
         <div className="announcements-form-section">
           <h3>Audience</h3>
-          
+
           <div className="announcements-form-group">
             <label>Target Users *</label>
             <div className="announcements-target-options">
@@ -370,13 +411,13 @@ export default function Announcements({ currentUser, onLogout }) {
                   name="target_users"
                   value="all"
                   checked={formData.target_users === 'all'}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, target_users: e.target.value }))}
                   disabled={loading}
                 />
                 <span className="announcements-target-icon">{MaterialIcons.People}</span>
                 <div className="announcements-target-info">
                   <div className="announcements-target-label">All Users</div>
-                  <div className="announcements-target-description">Send to all registered users via in-app and email</div>
+                  <div className="announcements-target-description">Send to all registered users</div>
                 </div>
               </label>
 
@@ -386,13 +427,13 @@ export default function Announcements({ currentUser, onLogout }) {
                   name="target_users"
                   value="specific_barangay"
                   checked={formData.target_users === 'specific_barangay'}
-                  onChange={handleInputChange}
+                  onChange={(e) => setFormData(prev => ({ ...prev, target_users: e.target.value }))}
                   disabled={loading}
                 />
                 <span className="announcements-target-icon">{MaterialIcons.Location}</span>
                 <div className="announcements-target-info">
                   <div className="announcements-target-label">Specific Barangay</div>
-                  <div className="announcements-target-description">Send to users in a specific barangay via in-app and email</div>
+                  <div className="announcements-target-description">Send to users in a specific barangay</div>
                 </div>
               </label>
             </div>
@@ -404,7 +445,7 @@ export default function Announcements({ currentUser, onLogout }) {
               <select
                 name="barangay"
                 value={formData.barangay}
-                onChange={handleInputChange}
+                onChange={(e) => setFormData(prev => ({ ...prev, barangay: e.target.value }))}
                 disabled={loading}
               >
                 <option value="">Select a barangay</option>
@@ -429,55 +470,31 @@ export default function Announcements({ currentUser, onLogout }) {
           </button>
         </div>
       </form>
-
-      <div className="announcements-preview-section">
-        <h3>Preview</h3>
-        <div 
-          className="announcements-preview-card" 
-          data-type={formData.type}
-        >
-          <div className="announcements-preview-header">
-            <span className="announcements-preview-icon">
-              {getTypeIcon(formData.type)}
-            </span>
-            <div className="announcements-preview-title">
-              <strong>{formData.title || "Announcement Title"}</strong>
-              <span className="announcements-preview-type">
-                {formData.type.charAt(0).toUpperCase() + formData.type.slice(1)}
-              </span>
-            </div>
-          </div>
-          <div className="announcements-preview-message">
-            {formData.message || "Your announcement message will appear here..."}
-          </div>
-          <div className="announcements-preview-audience">
-            <strong>To:</strong> {
-              formData.target_users === 'all' 
-                ? 'All Users' 
-                : formData.barangay 
-                  ? `Users in ${formData.barangay}`
-                  : 'Specific Barangay (not selected)'
-            }
-          </div>
-          <div className="announcements-preview-delivery">
-            <strong>Delivery:</strong> In-app notification + Email
-          </div>
-        </div>
-      </div>
     </div>
-  );
+  ), [formData, loading, announcementTypes, barangays, handleSubmit]);
 
-  const AnnouncementHistory = () => (
+  const historyContent = useMemo(() => (
     <div className="announcements-history-section">
       <div className="announcements-history-header">
         <h3>{MaterialIcons.History} Announcement History</h3>
-        <button 
-          className="announcements-refresh-btn"
-          onClick={loadAnnouncementHistory}
-          disabled={historyLoading}
-        >
-          {historyLoading ? 'Refreshing...' : '🔄 Refresh'}
-        </button>
+        <div className="announcements-history-actions">
+          {announcementHistory.length > 0 && (
+            <button 
+              className="announcements-delete-all-btn"
+              onClick={deleteAllAnnouncements}
+              disabled={historyLoading}
+            >
+              {MaterialIcons.Delete} Delete All
+            </button>
+          )}
+          <button 
+            className="announcements-refresh-btn"
+            onClick={loadAnnouncementHistory}
+            disabled={historyLoading}
+          >
+            {historyLoading ? 'Refreshing...' : '🔄 Refresh'}
+          </button>
+        </div>
       </div>
 
       {historyLoading ? (
@@ -494,11 +511,7 @@ export default function Announcements({ currentUser, onLogout }) {
       ) : (
         <div className="announcements-history-list">
           {announcementHistory.map(announcement => (
-            <div 
-              key={announcement.id}
-              className="announcements-history-card"
-              data-type={announcement.type}
-            >
+            <div key={announcement.id} className="announcements-history-card" data-type={announcement.type}>
               <div className="announcements-history-header-info">
                 <div className="announcements-history-title-section">
                   <span className="announcements-history-type-icon">
@@ -516,6 +529,13 @@ export default function Announcements({ currentUser, onLogout }) {
                     </div>
                   </div>
                 </div>
+                <button 
+                  className="announcements-delete-btn"
+                  onClick={() => deleteAnnouncement(announcement.id, announcement.title)}
+                  title="Delete announcement from history"
+                >
+                  {MaterialIcons.Delete}
+                </button>
               </div>
               
               <div className="announcements-history-message">
@@ -530,27 +550,16 @@ export default function Announcements({ currentUser, onLogout }) {
                       : `Users in ${announcement.barangay}`
                   }
                 </div>
-                <div className="announcements-history-stats">
-                  {announcement.emails_sent !== undefined && (
-                    <>
-                      <span>📧 {announcement.emails_sent} sent</span>
-                      {announcement.emails_failed > 0 && (
-                        <span className="announcements-failed-count">❌ {announcement.emails_failed} failed</span>
-                      )}
-                    </>
-                  )}
-                </div>
               </div>
             </div>
           ))}
         </div>
       )}
     </div>
-  );
+  ), [announcementHistory, historyLoading, deleteAnnouncement, deleteAllAnnouncements, loadAnnouncementHistory, getTypeIcon, formatDate]);
 
   return (
     <div className="announcements-body">
-      {/* Top Bar */}
       <div className="announcements-topbar">
         <button 
           className="announcements-mobile-menu-btn"
@@ -559,11 +568,7 @@ export default function Announcements({ currentUser, onLogout }) {
           ☰
         </button>
         <div className="announcements-logo-title-container">
-           <img 
-            src="/images/logo.jpg" 
-            alt="EventHub Logo" 
-            className="topbar-logo"
-          />
+          <img src="/images/logo.jpg" alt="EventHub Logo" className="topbar-logo" />
           <h3 className="announcements-title">EventHub</h3>
         </div>
         
@@ -577,7 +582,6 @@ export default function Announcements({ currentUser, onLogout }) {
         </div>
       </div>
 
-      {/* Sidebar */}
       <div className={`announcements-sidebar ${mobileMenuOpen ? 'announcements-mobile-open' : ''}`}>
         <ul>
           <li>
@@ -599,23 +603,18 @@ export default function Announcements({ currentUser, onLogout }) {
       </div>
 
       {mobileMenuOpen && (
-        <div 
-          className="announcements-mobile-overlay"
-          onClick={() => setMobileMenuOpen(false)}
-        />
+        <div className="announcements-mobile-overlay" onClick={() => setMobileMenuOpen(false)} />
       )}
 
-      {/* Main Content */}
       <div className="announcements-admin-section">
         <div className="announcements-container">
           <div className="announcements-header-section">
             <div className="announcements-header-content">
               <h1>{MaterialIcons.Announcement} Send Announcement</h1>
-              <p>Broadcast important messages to all users or specific barangays. Notifications will be sent via in-app alerts and email.</p>
+              <p>Broadcast important messages to all users or specific barangays.</p>
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="announcements-tabs">
             <button 
               className={`announcements-tab ${activeTab === 'compose' ? 'announcements-tab-active' : ''}`}
@@ -631,8 +630,7 @@ export default function Announcements({ currentUser, onLogout }) {
             </button>
           </div>
 
-          {/* Tab Content */}
-          {activeTab === 'compose' ? <AnnouncementCompose /> : <AnnouncementHistory />}
+          {activeTab === 'compose' ? composeContent : historyContent}
         </div>
       </div>
     </div>

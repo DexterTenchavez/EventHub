@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 class Notification extends Model
 {
     use HasFactory;
@@ -45,4 +46,28 @@ class Notification extends Model
     {
         return $query->where('is_announcement', false);
     }
+
+    public function deleteAllRead()
+{
+    try {
+        $user = Auth::user();
+        
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $deletedCount = Notification::where('user_id', $user->id)
+            ->where('is_read', true)
+            ->delete();
+
+        return response()->json([
+            'message' => 'All read notifications deleted successfully',
+            'deleted_count' => $deletedCount
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error deleting all read notifications: ' . $e->getMessage());
+        return response()->json(['message' => 'Internal server error'], 500);
+    }
+}
 }
